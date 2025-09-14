@@ -50,6 +50,7 @@ using UnityEditor.Build.Reporting;
 
             var location = ResolveOutputPath(buildTarget, target, output);
             EnsureParentDir(location);
+            WriteBuildMetadata(target, flavor, development, location);
 
             var options = new BuildPlayerOptions
             {
@@ -233,6 +234,28 @@ using UnityEditor.Build.Reporting;
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
     }
+
+    private static void WriteBuildMetadata(string target, string flavor, bool development, string output)
+    {
+        try
+        {
+            var dir = Path.Combine("Library", "CrashLabBuild");
+            Directory.CreateDirectory(dir);
+            var json = "{" +
+                       $"\"target\":\"{target}\"," +
+                       $"\"flavor\":\"{flavor}\"," +
+                       $"\"development\":{(development ? "true" : "false")}," +
+                       $"\"output\":\"{EscapeJson(output)}\"" +
+                       "}";
+            File.WriteAllText(Path.Combine(dir, "build.json"), json);
+        }
+        catch (Exception e)
+        {
+            LogError($"Failed to write build metadata: {e.Message}");
+        }
+    }
+
+    private static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     private static string GetEnv(string key, string def) => Environment.GetEnvironmentVariable(key) ?? def;
 
