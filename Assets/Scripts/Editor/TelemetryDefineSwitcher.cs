@@ -99,7 +99,8 @@ namespace CrashLab.Editor
 
         private static IEnumerable<string> GetDefines(BuildTargetGroup group)
         {
-            var s = PlayerSettings.GetScriptingDefineSymbolsForGroup(group) ?? string.Empty;
+            var named = NamedBuildTarget.FromBuildTargetGroup(group);
+            var s = PlayerSettings.GetScriptingDefineSymbols(named) ?? string.Empty;
             var parts = s.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < parts.Length; i++)
             {
@@ -114,7 +115,8 @@ namespace CrashLab.Editor
             {
                 if (!string.IsNullOrWhiteSpace(d)) list.Add(d.Trim());
             }
-            PlayerSettings.SetScriptingDefineSymbolsForGroup(group, string.Join(";", list));
+            var named = NamedBuildTarget.FromBuildTargetGroup(group);
+            PlayerSettings.SetScriptingDefineSymbols(named, string.Join(";", list));
         }
     }
 }
