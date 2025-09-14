@@ -37,6 +37,10 @@ desktop.ini
 **/Player.log
 **/Player-prev.log
 
+# Local build logs (repo root)
+/*.log
+/build-*.log
+
 # Build artifacts
 *.apk
 *.aab
