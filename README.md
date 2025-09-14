@@ -28,6 +28,13 @@ Bundle IDs / Package Names
   - `BUNDLE_ID_IOS` or `IOS_BUNDLE_ID`
 - Defaults if unset: `com.aincrade.crashlab.<flavor>.<platform>`
 
+## Symbols Upload
+- Default behavior: after each build, the Editor post-build hook auto-attempts symbol upload.
+  - Crashlytics (Android): uploads if `Assets/google-services.json` exists and symbols are found.
+  - Sentry (macOS/Android): uploads if `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` are set.
+  - iOS: upload after Xcode archive (use scripts in `scripts/`).
+- Opt out by setting `CRASHLAB_NO_UPLOAD_SYMBOLS=true` before building.
+
 ## Repo Layout
 - `Assets/` — game content and code (add scripts under `Assets/Scripts/`).
 - `Packages/` — Unity packages (`manifest.json`).

@@ -21,10 +21,10 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 return;
             }
 
-            var upload = GetEnv("CRASHLAB_UPLOAD_SYMBOLS", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
-            if (!upload)
+            var noUpload = GetEnv("CRASHLAB_NO_UPLOAD_SYMBOLS", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
+            if (noUpload)
             {
-                UnityEngine.Debug.Log("[CrashLabPostBuild] CRASHLAB_UPLOAD_SYMBOLS != true; skipping symbol upload.");
+                UnityEngine.Debug.Log("[CrashLabPostBuild] CRASHLAB_NO_UPLOAD_SYMBOLS=true; skipping symbol upload.");
                 return;
             }
 
@@ -79,25 +79,31 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
             var dsyms = Directory.Exists(appDir)
                 ? Directory.GetDirectories(appDir, "*.dSYM", SearchOption.AllDirectories).FirstOrDefault()
                 : null;
-            if (dsyms != null)
+            if (dsyms != null && SentryEnvPresent())
             {
                 ShellBash($"PLATFORM=macos DSYM_DIR='{dsyms}' ./scripts/sentry_upload_symbols.sh");
             }
             else
             {
-                UnityEngine.Debug.LogWarning("[Sentry] No dSYM found near macOS app. Skipping.");
+                if (dsyms == null)
+                    UnityEngine.Debug.LogWarning("[Sentry] No dSYM found near macOS app. Skipping.");
+                else
+                    UnityEngine.Debug.LogWarning("[Sentry] Missing Sentry env (SENTRY_ORG/PROJECT/AUTH_TOKEN). Skipping.");
             }
         }
         else if (target == BuildTarget.Android)
         {
             var lib = GuessAndroidSymbolsDir();
-            if (lib != null)
+            if (lib != null && SentryEnvPresent())
             {
                 ShellBash($"PLATFORM=android ANDROID_LIB_DIR='{lib}' ./scripts/sentry_upload_symbols.sh");
             }
             else
             {
-                UnityEngine.Debug.LogWarning("[Sentry] Could not guess Android symbols dir. Skipping.");
+                if (lib == null)
+                    UnityEngine.Debug.LogWarning("[Sentry] Could not guess Android symbols dir. Skipping.");
+                else
+                    UnityEngine.Debug.LogWarning("[Sentry] Missing Sentry env (SENTRY_ORG/PROJECT/AUTH_TOKEN). Skipping.");
             }
         }
         else if (target == BuildTarget.iOS)
@@ -109,6 +115,11 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
             UnityEngine.Debug.Log("[Sentry] For Windows, set PDB_DIR and run scripts/sentry_upload_symbols.sh manually.");
         }
     }
+
+    private static bool SentryEnvPresent()
+        => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_ORG"))
+           && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_PROJECT"))
+           && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_AUTH_TOKEN"));
 
     private static string GuessAndroidSymbolsDir()
     {
@@ -187,4 +198,3 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         }
     }
 }
-
