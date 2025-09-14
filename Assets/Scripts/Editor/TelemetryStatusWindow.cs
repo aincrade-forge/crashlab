@@ -11,7 +11,7 @@ namespace CrashLab.Editor
         private const string DEFINE_CRASHLYTICS = "DIAG_CRASHLYTICS";
         private const string DEFINE_UNITY = "DIAG_UNITY";
 
-        [MenuItem("Tools/CrashLab/Telemetry/Status", priority = 50)]
+        [MenuItem("CrashLab/Telemetry/Status", priority = 50)]
         public static void ShowWindow()
         {
             var win = GetWindow<TelemetryStatusWindow>(false, "Telemetry Status", true);
@@ -115,4 +115,3 @@ namespace CrashLab.Editor
         }
     }
 }
-

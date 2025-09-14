@@ -18,7 +18,7 @@ namespace CrashLab.Editor
             DEFINE_UNITY,
         };
 
-        private const string MenuRoot = "Tools/CrashLab/Telemetry/";
+        private const string MenuRoot = "CrashLab/Telemetry/";
         private const string MenuSentry = MenuRoot + "Use Sentry";
         private const string MenuCrashlytics = MenuRoot + "Use Crashlytics";
         private const string MenuUnity = MenuRoot + "Use Unity Diagnostics";
@@ -118,4 +118,3 @@ namespace CrashLab.Editor
         }
     }
 }
-
