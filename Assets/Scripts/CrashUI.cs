@@ -6,20 +6,30 @@ namespace CrashLab
 {
     public class CrashUI : MonoBehaviour
     {
-        private readonly List<(string, System.Action)> _actions = new List<(string, System.Action)>
+        private struct ActionItem
         {
-            ("Managed: NullRef", CrashActions.ManagedNullRef),
-            ("Managed: DivZero", CrashActions.ManagedDivZero),
-            ("Managed: Unhandled", CrashActions.ManagedUnhandled),
-            ("Managed: Unobserved Task", CrashActions.ManagedUnobservedTask),
-            ("Native: AccessViolation", CrashActions.NativeAccessViolation),
-            ("Native: Abort", CrashActions.NativeAbort),
-            ("Native: FatalError", CrashActions.NativeFatal),
-            ("Native: StackOverflow", CrashActions.NativeStackOverflow),
-            ("Hang: Android ANR (10s)", () => CrashActions.AndroidAnr(10)),
-            ("Hang: Desktop (10s)", () => CrashActions.DesktopHang(10)),
-            ("OOM: Heap", CrashActions.OomHeap),
-            ("Schedule: Startup crash", CrashActions.ScheduleStartupCrash),
+            public string Label;
+            public System.Action Handler;
+            public ActionItem(string label, System.Action handler)
+            {
+                Label = label; Handler = handler;
+            }
+        }
+
+        private readonly List<ActionItem> _actions = new List<ActionItem>
+        {
+            new ActionItem("Managed: NullRef", CrashActions.ManagedNullRef),
+            new ActionItem("Managed: DivZero", CrashActions.ManagedDivZero),
+            new ActionItem("Managed: Unhandled", CrashActions.ManagedUnhandled),
+            new ActionItem("Managed: Unobserved Task", CrashActions.ManagedUnobservedTask),
+            new ActionItem("Native: AccessViolation", CrashActions.NativeAccessViolation),
+            new ActionItem("Native: Abort", CrashActions.NativeAbort),
+            new ActionItem("Native: FatalError", CrashActions.NativeFatal),
+            new ActionItem("Native: StackOverflow", CrashActions.NativeStackOverflow),
+            new ActionItem("Hang: Android ANR (10s)", () => CrashActions.AndroidAnr(10)),
+            new ActionItem("Hang: Desktop (10s)", () => CrashActions.DesktopHang(10)),
+            new ActionItem("OOM: Heap", CrashActions.OomHeap),
+            new ActionItem("Schedule: Startup crash", () => CrashActions.ScheduleStartupCrash()),
         };
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -62,10 +72,11 @@ namespace CrashLab
             var fitter = panel.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            foreach (var (label, action) in _actions)
+            foreach (var item in _actions)
             {
-                var btn = CreateButton(panel.transform, label);
-                btn.onClick.AddListener(() => action());
+                var btn = CreateButton(panel.transform, item.Label);
+                var handler = item.Handler; // avoid modified closure
+                btn.onClick.AddListener(() => handler());
             }
 
             var info = CreateText(panel.transform, "Info", 12, TextAnchor.UpperLeft);
@@ -112,4 +123,3 @@ namespace CrashLab
         }
     }
 }
-

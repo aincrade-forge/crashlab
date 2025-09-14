@@ -14,7 +14,7 @@ using Firebase.Crashlytics;
 using System.Threading.Tasks;
 using Unity.Services.Core;
 using Unity.Services.Core.Environments;
-using Unity.Services.CloudDiagnostics;
+using Unity.Services.CloudDiagnostics; // CrashReporting API lives here
 #endif
 
 namespace CrashLab
@@ -132,7 +132,7 @@ namespace CrashLab
 #elif DIAG_CRASHLYTICS
             Crashlytics.Log(condition);
 #elif DIAG_UNITY
-            // Cloud Diagnostics has no breadcrumbs; metadata and logs will aid context.
+            // Cloud Diagnostics has no breadcrumbs API; logs + metadata provide context.
 #else
             // Nothing extra; logs already in Player.log
 #endif
@@ -191,15 +191,17 @@ namespace CrashLab
 
             try
             {
-                CloudDiagnostics.Instance.SetUserId(userId);
-                var md = new Dictionary<string, object>();
-                foreach (var kv in meta) md[kv.Key] = kv.Value;
-                CloudDiagnostics.Instance.SetCustomMetadata(md);
+                // UGS Cloud Diagnostics Crash Reporting API
+                UnityEngine.CrashReportHandler.CrashReportHandler.SetUserMetadata("user_id", userId);
+                foreach (var kv in meta) 
+                {
+                  UnityEngine.CrashReportHandler.CrashReportHandler.SetUserMetadata(kv.Key, kv.Value);
+                }
                 Debug.Log("CRASHLAB::UNITY_DIAGNOSTICS::initialized");
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"CloudDiagnostics init failed: {e.Message}");
+                Debug.LogWarning($"CloudDiagnostics CrashReporting init failed: {e.Message}");
             }
         }
 #endif
