@@ -76,4 +76,5 @@ Bundle IDs / Package Names
 - Headless triggers: `CrashHeadlessTriggers` handles deep links and Android intent extras; it also runs any scheduled startup crash.
 
 ## Notes
-- Build/test matrix and telemetry switching are documented in `docs/build-matrix.md`.
+- Build/test matrix and telemetry switching: `docs/build-matrix.md`.
+- Crash/error coverage expectations per platform/provider: `docs/error-crash-matrix.md`.
