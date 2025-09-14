@@ -10,13 +10,26 @@ using UnityEditor.Build.Reporting;
         // Entry point for CLI: -executeMethod BuildScripts.BuildRelease
         public static void BuildRelease()
         {
-        try
-        {
-            var target = GetEnv("TARGET", "macos-arm64");
-            var flavor = GetEnv("FLAVOR", "unity"); // sentry | crashlytics | unity
-            var output = GetEnv("OUTPUT", string.Empty);
-            var development = GetEnv("DEV_MODE", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                var target = GetEnv("TARGET", "macos-arm64");
+                var flavor = GetEnv("FLAVOR", "unity"); // sentry | crashlytics | unity
+                var output = GetEnv("OUTPUT", string.Empty);
+                var development = GetEnv("DEV_MODE", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
+                var path = BuildOnce(target, flavor, development, output);
+                Log($"Build succeeded → {path}");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex.ToString());
+                EditorApplication.Exit(1);
+            }
+        }
 
+        // Non-exiting build API for Editor menu usage
+        public static string BuildOnce(string target, string flavor, bool development, string output = "")
+        {
             var (buildTarget, group) = MapTarget(target);
             ConfigureFlavor(group, flavor);
             ConfigureIdentifiers(group, target, flavor);
@@ -52,15 +65,8 @@ using UnityEditor.Build.Reporting;
                 throw new Exception($"Build failed: {report.summary.result} - {report.summary.totalErrors} errors");
             }
 
-            Log($"Build succeeded → {location}");
-            EditorApplication.Exit(0);
+            return location;
         }
-        catch (Exception ex)
-        {
-            LogError(ex.ToString());
-            EditorApplication.Exit(1);
-        }
-    }
 
     private static (BuildTarget, BuildTargetGroup) MapTarget(string target)
     {
