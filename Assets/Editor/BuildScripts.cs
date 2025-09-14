@@ -86,9 +86,11 @@ using UnityEditor.TestTools.TestRunner.Api;
                     throw new Exception("No scenes found to build. Enable at least one scene in Build Settings.");
             }
 
-            var location = ResolveOutputPath(buildTarget, target, output);
+            var artifactDir = ResolveArtifactDir(target, flavor);
+            EnsureDir(artifactDir);
+            var location = ResolveOutputPath(buildTarget, target, flavor, output, artifactDir);
             EnsureParentDir(location);
-            WriteBuildMetadata(target, flavor, development, location);
+            WriteBuildMetadata(target, flavor, development, location, artifactDir);
 
             var options = new BuildPlayerOptions
             {
@@ -263,7 +265,7 @@ using UnityEditor.TestTools.TestRunner.Api;
         }
     }
 
-    private static string ResolveOutputPath(BuildTarget target, string targetKey, string output)
+    private static string ResolveOutputPath(BuildTarget target, string targetKey, string flavor, string output, string artifactDir)
     {
         if (!string.IsNullOrEmpty(output))
             return output;
@@ -271,17 +273,20 @@ using UnityEditor.TestTools.TestRunner.Api;
         switch (target)
         {
             case BuildTarget.Android:
-                return Path.Combine("Builds", "Android", "CrashLab.apk");
+                return Path.Combine(artifactDir, "CrashLab.apk");
             case BuildTarget.iOS:
-                return Path.Combine("Builds", "iOS"); // Xcode project dir
+                return artifactDir; // Xcode project dir
             case BuildTarget.StandaloneOSX:
-                return Path.Combine("Builds", "macOS", "CrashLab.app");
+                return Path.Combine(artifactDir, "CrashLab.app");
             case BuildTarget.StandaloneWindows64:
-                return Path.Combine("Builds", "Windows", "CrashLab.exe");
+                return Path.Combine(artifactDir, "CrashLab.exe");
             default:
                 throw new ArgumentOutOfRangeException(nameof(target));
         }
     }
+
+    private static string ResolveArtifactDir(string target, string flavor)
+        => Path.Combine("Artifacts", $"{target}-{flavor}");
 
     private static void EnsureParentDir(string path)
     {
@@ -291,7 +296,12 @@ using UnityEditor.TestTools.TestRunner.Api;
             Directory.CreateDirectory(dir);
     }
 
-    private static void WriteBuildMetadata(string target, string flavor, bool development, string output)
+    private static void EnsureDir(string dir)
+    {
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+    }
+
+    private static void WriteBuildMetadata(string target, string flavor, bool development, string output, string artifactDir)
     {
         try
         {
@@ -304,6 +314,9 @@ using UnityEditor.TestTools.TestRunner.Api;
                        $"\"output\":\"{EscapeJson(output)}\"" +
                        "}";
             File.WriteAllText(Path.Combine(dir, "build.json"), json);
+            // Also write into artifact directory for convenience
+            EnsureDir(artifactDir);
+            File.WriteAllText(Path.Combine(artifactDir, "build.json"), json);
         }
         catch (Exception e)
         {

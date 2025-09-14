@@ -22,16 +22,37 @@ fi
 : "${MATRIX:=false}"
 : "${TESTS:=false}"
 
-LOG_PATH="$PROJECT_PATH/build-${TARGET}-${FLAVOR}.log"
+ARTIFACT_DIR="$PROJECT_PATH/Artifacts/${TARGET}-${FLAVOR}"
+mkdir -p "$ARTIFACT_DIR"
+LOG_PATH="$ARTIFACT_DIR/build.log"
 
 if [[ "$MATRIX" == "true" ]]; then
   echo "Running build matrix targets=${TARGETS:-default} dev_mode=$DEV_MODE"
-  TARGETS="${TARGETS:-windows-x64,macos-arm64,android-arm64,ios-arm64}" DEV_MODE="$DEV_MODE" \
-  "$UNITY_APP" -batchmode -quit -nographics \
-    -projectPath "$PROJECT_PATH" \
-    -logFile "$LOG_PATH" \
-    -executeMethod BuildScripts.BuildMatrix
-  echo "Build matrix finished. See log: $LOG_PATH"
+  IFS=',' read -r -a TARGET_ARR <<< "${TARGETS:-windows-x64,macos-arm64,android-arm64,ios-arm64}"
+  flavors_for_target() {
+    case "$1" in
+      windows-x64) echo "sentry unity";;
+      macos-arm64) echo "sentry unity";;
+      android-arm64) echo "sentry crashlytics unity";;
+      ios-arm64) echo "sentry crashlytics unity";;
+      *) echo "";;
+    esac
+  }
+  for t in "${TARGET_ARR[@]}"; do
+    for f in $(flavors_for_target "$t"); do
+      ARTIFACT_DIR="$PROJECT_PATH/Artifacts/${t}-${f}"
+      mkdir -p "$ARTIFACT_DIR"
+      LOG_PATH="$ARTIFACT_DIR/build.log"
+      echo "Building $t / $f (dev=$DEV_MODE)" | tee "$LOG_PATH"
+      TARGET="$t" FLAVOR="$f" DEV_MODE="$DEV_MODE" \
+      "$UNITY_APP" -batchmode -quit -nographics \
+        -projectPath "$PROJECT_PATH" \
+        -logFile "$LOG_PATH" \
+        -executeMethod BuildScripts.BuildRelease || exit 1
+      echo "Built $t / $f → see $LOG_PATH"
+    done
+  done
+  echo "Build matrix finished. Logs under Artifacts/<target>-<flavor>/build.log"
 elif [[ "$TESTS" == "true" ]]; then
   echo "Running test matrix flavors=${FLAVORS:-auto}"
   FLAVORS="${FLAVORS:-}" \

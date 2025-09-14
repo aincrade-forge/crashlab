@@ -23,6 +23,13 @@ Tests via CLI
   - `TESTS=true FLAVORS="sentry,unity" ./build.sh`
   - If FLAVORS is omitted, defaults to flavors supported by the active platform.
 
+Artifacts & Logs
+
+- Each build writes to `Artifacts/<target>-<flavor>/`:
+  - Build output (app/apk/exe or Xcode project folder)
+  - `build.json` summary
+  - `build.log` (Unity log for that build)
+
 Notes
 
 - BuildScripts switches scripting define symbols per flavor so the correct telemetry service is compiled.

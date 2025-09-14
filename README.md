@@ -19,6 +19,9 @@ CLI helpers:
 - Single build: `TARGET=windows-x64 FLAVOR=sentry DEV_MODE=false ./build.sh`
 - Build matrix: `MATRIX=true TARGETS="windows-x64,macos-arm64,android-arm64,ios-arm64" ./build.sh`
 - Test matrix (EditMode): `TESTS=true FLAVORS="sentry,unity" ./build.sh`
+
+Artifacts:
+- Each build writes to `Artifacts/<target>-<flavor>/` with `build.log`, `build.json`, and output app/package.
   - See `docs/build-matrix.md` for supported flavor/platform combos.
 
 Bundle IDs / Package Names
@@ -78,3 +81,4 @@ Bundle IDs / Package Names
 ## Notes
 - Build/test matrix and telemetry switching: `docs/build-matrix.md`.
 - Crash/error coverage expectations per platform/provider: `docs/error-crash-matrix.md`.
+- Sentry native support (manual install) checklist: `docs/sentry-native-manual.md`.

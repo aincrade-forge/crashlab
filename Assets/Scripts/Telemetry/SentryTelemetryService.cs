@@ -20,15 +20,18 @@ namespace CrashLab
                 if (!SentrySdk.IsEnabled)
                 {
                     var dsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
-                    SentryUnity.Init(o =>
+                    SentrySdk.Init(o =>
                     {
                         if (!string.IsNullOrWhiteSpace(dsn)) o.Dsn = dsn;
                         o.Release = release;
                         o.Environment = environment;
                         // Sensible defaults (can override via env vars below)
                         o.AutoSessionTracking = true;
-                        o.CaptureInEditor = true;
+                        // o.CaptureInEditor = true;
                         o.AttachStacktrace = true;
+
+                        // Ensure native support defaults are enabled where available
+                        ApplyNativeDefaults(o);
 
                         // Optional advanced configuration via env vars
                         ApplyEnvOverrides(o);
@@ -40,14 +43,14 @@ namespace CrashLab
                     Debug.Log("CRASHLAB::SENTRY::already_initialized (using existing settings)");
                 }
 
-                SentrySdk.ConfigureScope(scope =>
-                {
-                    scope.User = new User { Id = userId };
-                    foreach (var kv in meta)
-                    {
-                        scope.SetTag(kv.Key, kv.Value);
-                    }
-                });
+                // SentrySdk.ConfigureScope(scope =>
+                // {
+                //     // scope.User = new User { Id = userId };
+                //     // foreach (var kv in meta)
+                //     // {
+                //     //     scope.SetTag(kv.Key, kv.Value);
+                //     // }
+                // });
 
                 SentrySdk.AddBreadcrumb("CrashLab init", category: "crashlab", level: BreadcrumbLevel.Info);
             }
@@ -57,12 +60,12 @@ namespace CrashLab
             }
         }
 
-        private static void ApplyEnvOverrides(SentryUnityOptions o)
+        private static void ApplyEnvOverrides(SentryOptions o)
         {
             // Booleans
             if (TryGetBool("SENTRY_DEBUG", out var debug)) o.Debug = debug;
             if (TryGetBool("SENTRY_AUTO_SESSION_TRACKING", out var ast)) o.AutoSessionTracking = ast;
-            if (TryGetBool("SENTRY_CAPTURE_IN_EDITOR", out var cie)) o.CaptureInEditor = cie;
+            // if (TryGetBool("SENTRY_CAPTURE_IN_EDITOR", out var cie)) o.CaptureInEditor = cie;
             if (TryGetBool("SENTRY_ATTACH_STACKTRACE", out var attach)) o.AttachStacktrace = attach;
             if (TryGetBool("SENTRY_SEND_DEFAULT_PII", out var pii)) o.SendDefaultPii = pii;
 
@@ -71,7 +74,7 @@ namespace CrashLab
             // ProfilesSampleRate may not be present in all SDK versions; reflection fallback provided below.
             if (TryGetDouble("SENTRY_PROFILES_SAMPLE_RATE", out var psr))
             {
-                var prop = typeof(SentryUnityOptions).GetProperty("ProfilesSampleRate");
+                var prop = typeof(SentryOptions).GetProperty("ProfilesSampleRate");
                 if (prop != null && prop.CanWrite && prop.PropertyType == typeof(double))
                 {
                     prop.SetValue(o, psr);
@@ -89,7 +92,7 @@ namespace CrashLab
                 foreach (var part in inAppIncludes.Split(','))
                 {
                     var p = part.Trim();
-                    if (!string.IsNullOrEmpty(p)) o.InAppInclude.Add(p);
+                    if (!string.IsNullOrEmpty(p)) TryAddToListProperty(o, "InAppInclude", p);
                 }
             }
 
@@ -99,7 +102,7 @@ namespace CrashLab
                 foreach (var part in inAppExcludes.Split(','))
                 {
                     var p = part.Trim();
-                    if (!string.IsNullOrEmpty(p)) o.InAppExclude.Add(p);
+                    if (!string.IsNullOrEmpty(p)) TryAddToListProperty(o, "InAppExclude", p);
                 }
             }
 
@@ -107,7 +110,20 @@ namespace CrashLab
             ApplyArbitraryEnvOverrides(o);
         }
 
-        private static void ApplyArbitraryEnvOverrides(SentryUnityOptions o)
+        private static void ApplyNativeDefaults(SentryOptions o) 
+        {
+            TrySetBool(o, "AndroidNativeSupportEnabled", true);
+            TrySetBool(o, "IosNativeSupportEnabled", true);
+            TrySetBool(o, "MacOsNativeSupportEnabled", true);
+            TrySetBool(o, "WindowsNativeSupportEnabled", true);
+            // IL2CPP line number mapping support (if available in this SDK)
+            TrySetBool(o, "Il2CppLineNumberSupportEnabled", true);
+            // Android ANR detection defaults (if exposed by this SDK version)
+            TrySetBool(o, "AnrDetectionEnabled", true);
+            TrySetInt(o, "AnrTimeout", 5000); // milliseconds, if property exists
+        }
+
+        private static void ApplyArbitraryEnvOverrides(SentryOptions o)
         {
             try
             {
@@ -120,7 +136,7 @@ namespace CrashLab
                     var valueString = entry.Value as string;
                     if (string.IsNullOrEmpty(propName) || valueString == null) continue;
 
-                    var prop = typeof(SentryUnityOptions).GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+                    var prop = typeof(SentryOptions).GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
                     if (prop == null || !prop.CanWrite) continue;
 
                     object parsed = null;
@@ -162,6 +178,33 @@ namespace CrashLab
             var s = Environment.GetEnvironmentVariable(key);
             if (string.IsNullOrWhiteSpace(s)) return false;
             return double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value);
+        }
+
+        private static void TrySetBool(SentryOptions o, string propName, bool value)
+        {
+            var p = typeof(SentryUnityOptions).GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+            if (p != null && p.CanWrite && p.PropertyType == typeof(bool))
+            {
+                try { p.SetValue(o, value); } catch { }
+            }
+        }
+
+        private static void TrySetInt(SentryOptions o, string propName, int value)
+        {
+            var p = typeof(SentryOptions).GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+            if (p != null && p.CanWrite && p.PropertyType == typeof(int))
+            {
+                try { p.SetValue(o, value); } catch { }
+            }
+        }
+
+        private static void TryAddToListProperty(object o, string propName, object value)
+        {
+            var p = o.GetType().GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+            if (p == null) return;
+            var list = p.GetValue(o) as System.Collections.IList;
+            if (list == null) return;
+            try { list.Add(value); } catch { }
         }
 
         private static bool TryGetInt(string key, out int value)
