@@ -32,15 +32,7 @@ namespace CrashLab
             new ActionItem("Schedule: Startup crash", () => CrashActions.ScheduleStartupCrash()),
         };
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
-        {
-            CrashActions.CheckAndRunStartupCrash();
-
-            var go = new GameObject("CrashLabUI");
-            DontDestroyOnLoad(go);
-            go.AddComponent<CrashUI>();
-        }
+        // Legacy auto-install UI removed. Use CrashLab.UI.CrashUIBuilder in-scene instead.
 
         private void Awake()
         {

@@ -8,6 +8,7 @@ namespace CrashLab
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
+            CrashActions.CheckAndRunStartupCrash();
             var go = new GameObject("CrashLabHeadless");
             DontDestroyOnLoad(go);
             go.AddComponent<CrashHeadlessTriggers>();
@@ -123,4 +124,3 @@ namespace CrashLab
         }
     }
 }
-
