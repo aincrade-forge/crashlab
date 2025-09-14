@@ -21,6 +21,13 @@ Example CLI (adjust path/version):
   -batchmode -quit -projectPath . -buildTarget StandaloneOSX
 ```
 
+Bundle IDs / Package Names
+- Control identifiers via env vars when building:
+  - `BUNDLE_ID` (applies to all platforms)
+  - `BUNDLE_ID_ANDROID` or `ANDROID_APPLICATION_ID`
+  - `BUNDLE_ID_IOS` or `IOS_BUNDLE_ID`
+- Defaults if unset: `com.aincrade.crashlab.<flavor>.<platform>`
+
 ## Repo Layout
 - `Assets/` — game content and code (add scripts under `Assets/Scripts/`).
 - `Packages/` — Unity packages (`manifest.json`).

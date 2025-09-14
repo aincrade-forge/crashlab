@@ -1,6 +1,9 @@
 {
   "dependencies": {
     "com.boxqkrtm.ide.cursor": "https://github.com/boxqkrtm/com.unity.ide.cursor.git",
+    "com.google.external-dependency-manager": "file:vendor/com.google.external-dependency-manager-1.2.186.tgz",
+    "com.google.firebase.app": "file:vendor/com.google.firebase.app-13.2.0.tgz",
+    "com.google.firebase.crashlytics": "file:vendor/com.google.firebase.crashlytics-13.2.0.tgz",
     "com.unity.2d.animation": "11.0.0",
     "com.unity.2d.aseprite": "1.2.5",
     "com.unity.2d.psdimporter": "10.1.1",
@@ -16,9 +19,6 @@
     "com.unity.render-pipelines.universal": "17.1.0",
     "com.unity.services.cloud-diagnostics": "1.0.11",
     "com.unity.services.core": "1.12.0",
-    "com.google.external-dependency-manager": "file:Packages/vendor/com.google.external-dependency-manager-1.2.186.tgz",
-    "com.google.firebase.app": "file:Packages/vendor/com.google.firebase.app-13.2.0.tgz",
-    "com.google.firebase.crashlytics": "file:Packages/vendor/com.google.firebase.crashlytics-13.2.0.tgz",
     "com.unity.test-framework": "1.5.1",
     "com.unity.timeline": "1.8.7",
     "com.unity.ugui": "2.0.0",

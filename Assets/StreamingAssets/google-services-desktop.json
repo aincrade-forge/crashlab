@@ -1,0 +1,31 @@
+{
+  "project_info": {
+    "project_number": "388633377698",
+    "project_id": "crashlab-f8e90",
+    "storage_bucket": "crashlab-f8e90.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388633377698:ios:9749871f5e0d4992d3d0fb",
+        "android_client_info": {
+          "package_name": "com.aincrad.crashlab"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLV3ecYxgehhh3QuHSQq8c8UiqCBhQYZM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 0
+        },
+        "appinvite_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

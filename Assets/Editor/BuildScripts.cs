@@ -5,11 +5,11 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 
-public static class BuildScripts
-{
-    // Entry point for CLI: -executeMethod BuildScripts.BuildRelease
-    public static void BuildRelease()
+    public static class BuildScripts
     {
+        // Entry point for CLI: -executeMethod BuildScripts.BuildRelease
+        public static void BuildRelease()
+        {
         try
         {
             var target = GetEnv("TARGET", "macos-arm64");
@@ -19,6 +19,7 @@ public static class BuildScripts
 
             var (buildTarget, group) = MapTarget(target);
             ConfigureFlavor(group, flavor);
+            ConfigureIdentifiers(group, target, flavor);
             ConfigureIl2Cpp(group, buildTarget, target);
 
             var scenes = EditorBuildSettings.scenes
@@ -137,6 +138,46 @@ public static class BuildScripts
         }
     }
 
+    private static void ConfigureIdentifiers(BuildTargetGroup group, string targetKey, string flavor)
+    {
+        // Allow explicit IDs via env vars; fall back to sensible defaults per flavor
+        // Generic override
+        var genericId = GetEnv("BUNDLE_ID", null);
+
+        // Platform-specific overrides
+        var androidId = GetEnv("BUNDLE_ID_ANDROID", GetEnv("ANDROID_APPLICATION_ID", null));
+        var iosId = GetEnv("BUNDLE_ID_IOS", GetEnv("IOS_BUNDLE_ID", null));
+
+        // Default patterns if nothing provided
+        string DefaultFor(string platform)
+            => $"com.aincrade.crashlab.{flavor}.{platform}".ToLowerInvariant();
+
+        switch (targetKey)
+        {
+            case "android-arm64":
+                var finalAndroid = genericId ?? androidId ?? DefaultFor("android");
+                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, finalAndroid);
+                Log($"Android applicationId: {finalAndroid}");
+                break;
+            case "ios-arm64":
+                var finalIos = genericId ?? iosId ?? DefaultFor("ios");
+                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, finalIos);
+                Log($"iOS bundle id: {finalIos}");
+                break;
+            case "macos-arm64":
+                // Optional: set standalone identifier (not strictly required)
+                var finalMac = genericId ?? DefaultFor("macos");
+                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Standalone, finalMac);
+                Log($"macOS bundle id: {finalMac}");
+                break;
+            case "windows-x64":
+                var finalWin = genericId ?? DefaultFor("windows");
+                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Standalone, finalWin);
+                Log($"Windows product id: {finalWin}");
+                break;
+        }
+    }
+
     private static string ResolveOutputPath(BuildTarget target, string targetKey, string output)
     {
         if (!string.IsNullOrEmpty(output))
@@ -170,4 +211,3 @@ public static class BuildScripts
     private static void Log(string msg) => Console.WriteLine($"[BuildScripts] {msg}");
     private static void LogError(string msg) => Console.Error.WriteLine($"[BuildScripts:ERROR] {msg}");
 }
-
