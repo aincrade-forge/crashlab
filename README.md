@@ -15,11 +15,11 @@ Unity project for testing and comparing crash reporting across Sentry, Firebase 
   - iOS/macOS: `.ipa`/`.app`, dSYMs
   - Windows: `.exe`, PDBs
 
-Example CLI (adjust path/version):
-```
-/Applications/Unity/Hub/Editor/6000.1.10f1/Unity.app/Contents/MacOS/Unity \
-  -batchmode -quit -projectPath . -buildTarget StandaloneOSX
-```
+CLI helpers:
+- Single build: `TARGET=windows-x64 FLAVOR=sentry DEV_MODE=false ./build.sh`
+- Build matrix: `MATRIX=true TARGETS="windows-x64,macos-arm64,android-arm64,ios-arm64" ./build.sh`
+- Test matrix (EditMode): `TESTS=true FLAVORS="sentry,unity" ./build.sh`
+  - See `docs/build-matrix.md` for supported flavor/platform combos.
 
 Bundle IDs / Package Names
 - Control identifiers via env vars when building:
@@ -51,15 +51,16 @@ Bundle IDs / Package Names
 ## Telemetry & Metadata
 - The app sets common metadata at startup (see `Assets/Scripts/CrashLabTelemetry.cs`).
 - Provide env vars to stamp events: `RUN_ID`, `RELEASE_NAME`, `ENVIRONMENT`, `COMMIT_SHA`, `BUILD_NUMBER`, `DEV_MODE`, `USER_ID`, `CI`, `SERVER_NAME`.
-- Sentry/Crashlytics are configured under `DIAG_SENTRY` / `DIAG_CRASHLYTICS` defines.
+- Select telemetry provider via defines: `DIAG_SENTRY`, `DIAG_CRASHLYTICS`, or `DIAG_UNITY`.
+- Editor menu: CrashLab → Telemetry → Use Sentry | Use Crashlytics | Use Unity Diagnostics | Use None
+  - Status: CrashLab → Telemetry → Status shows per‑platform defines and active provider.
 - Unity Diagnostics (Cloud Diagnostics) initializes under `DIAG_UNITY` using UGS (`com.unity.services.core`, `com.unity.services.cloud-diagnostics`).
   - Link the project to UGS in Project Settings → Services, and set the desired environment.
   - The app sets `userId` and custom metadata (run_id, commit_sha, build_number, dev_mode, backend, platform, server_name).
 
 ## Sentry Setup
 - Sentry Unity SDK is added via UPM using a Git URL (see `docs/SENTRY_SETUP.md`).
-- Provide `SENTRY_DSN` via environment or configure via Tools → Sentry.
-- Build Sentry flavors from the menu: CrashLab → Build → Android/iOS • Sentry.
+- Provide `SENTRY_DSN` via environment. This project initializes Sentry in code and supports additional configuration via env vars (traces sample rate, PII, debug, in‑app include/exclude).
 
 ## Crashlytics via Tarballs + Git LFS
 - We vendor Firebase tarballs in `Packages/vendor/` with versioned filenames and track them in Git LFS.
@@ -70,5 +71,9 @@ Bundle IDs / Package Names
 - Read `AGENTS.md` for repository conventions (structure, style, tests, PRs).
 - Use Conventional Commits (e.g., `feat(player): add dash`).
 
+## UI & Triggers
+- In‑scene UI: use `CrashLab.UI.CrashUIBuilder` on your layout container and assign a `CrashUIButton` prefab to populate buttons at runtime.
+- Headless triggers: `CrashHeadlessTriggers` handles deep links and Android intent extras; it also runs any scheduled startup crash.
+
 ## Notes
-- Some automation (agent CLI, programmatic crash triggers) is planned but not yet included. Track progress and open items in `requirements.md`.
+- Build/test matrix and telemetry switching are documented in `docs/build-matrix.md`.

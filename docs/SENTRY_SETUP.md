@@ -10,11 +10,14 @@ This project integrates the Sentry Unity SDK via UPM.
 ## 2) DSN & Options
 Provide a DSN via one of the following:
 - Environment variable `SENTRY_DSN`
-- Unity Settings: Tools → Sentry → Setup (optional). If configured, the SDK will use those settings.
+- Unity Settings: Sentry window (optional). If configured, the SDK will use those settings. In this project, Sentry is initialized in code and can run fully from env vars.
 
-At runtime `CrashLabTelemetry` initializes Sentry with:
-- `Release` set to the app version, `Environment` from `ENVIRONMENT` (default `dev`).
-- User and tags (`run_id`, `backend`, `platform`, `commit_sha`, `build_number`, `dev_mode`, etc.).
+At runtime `CrashLabTelemetry` initializes Sentry and applies options. Common env vars supported:
+- Core: `SENTRY_DSN`, `RELEASE_NAME`, `ENVIRONMENT`
+- Booleans: `SENTRY_DEBUG`, `SENTRY_AUTO_SESSION_TRACKING`, `SENTRY_CAPTURE_IN_EDITOR`, `SENTRY_ATTACH_STACKTRACE`, `SENTRY_SEND_DEFAULT_PII`
+- Numbers: `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_MAX_BREADCRUMBS`
+- Strings: `SENTRY_SERVER_NAME`, `SENTRY_INAPP_INCLUDE` (comma‑sep), `SENTRY_INAPP_EXCLUDE` (comma‑sep)
+- Generic: any `SENTRY_OPT_<Property>` to set a `SentryUnityOptions` property (string/bool/int/double/enum)
 
 ## 3) Build
 - Use the Editor menu: CrashLab → Build → Android/iOS • Sentry

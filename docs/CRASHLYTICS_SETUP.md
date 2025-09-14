@@ -28,6 +28,7 @@ Place them in: `Packages/vendor/` (keep the version in the filename). UPM is con
 
 ## 5) Build
 - Use our build script: `TARGET=android-arm64 FLAVOR=crashlytics ./build.sh` or `TARGET=ios-arm64 FLAVOR=crashlytics ./build.sh`.
+- Crashlytics is not built for Windows/macOS desktop in our matrix (see `docs/build-matrix.md`).
 
 ## Notes
 - Crashlytics initialization happens in `CrashLabTelemetry` under `#if DIAG_CRASHLYTICS`.
