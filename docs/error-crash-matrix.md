@@ -16,6 +16,8 @@ Android (android-arm64)
 | Managed: NullRef/DivZero   |   ✓    |      ✓      |         ✓         | Unhandled exceptions
 | Managed: Unhandled         |   ✓    |      ✓      |         ✓         | throw new Exception
 | Managed: Unobserved Task   |   ~    |      ~      |         ~         | Delivery varies; not always fatal
+| Thread: Background/Pool    |   ✓    |      ✓      |         ✓         | Unhandled exception on worker thread
+| Thread: Unity API (worker) |   ~    |      ~      |         ~         | Usually logs error; may not crash
 | Native: AccessViolation    |   ✓    |      ✓      |         ✓         | ForceCrash AccessViolation
 | Native: Abort              |   ✓    |      ✓      |         ✓         | ForceCrash Abort
 | Native: FatalError         |   ✓    |      ✓      |         ✓         | ForceCrash FatalError
@@ -23,6 +25,9 @@ Android (android-arm64)
 | Hang: Android ANR (10s)    |   ✓    |      ✓      |         —         | Crashlytics & Sentry detect ANR
 | Hang: Desktop (10s)        |   —    |      —      |         —         | Not applicable on Android
 | OOM: Heap                  |   ~    |      ~      |         ~         | Often process-kill; capture varies
+| IO: File Write Denied      |   ✓    |      ✓      |         ✓         | UnauthorizedAccess/IOException
+| Data: JSON Parse Error     |   ✓    |      ✓      |         ✓         | FormatException
+| Lifecycle: Use After Dispose | ✓    |      ✓      |         ✓         | ObjectDisposedException
 | Startup: Managed Unhandled |   ✓    |      ✓      |         ✓         | Triggered at app start
 
 iOS (ios-arm64)
@@ -32,6 +37,8 @@ iOS (ios-arm64)
 | Managed: NullRef/DivZero   |   ✓    |      ✓      |         ✓         | Unhandled exceptions
 | Managed: Unhandled         |   ✓    |      ✓      |         ✓         | throw new Exception
 | Managed: Unobserved Task   |   ~    |      ~      |         ~         | Delivery varies; not always fatal
+| Thread: Background/Pool    |   ✓    |      ✓      |         ✓         | Unhandled exception on worker thread
+| Thread: Unity API (worker) |   ~    |      ~      |         ~         | Usually logs error; may not crash
 | Native: AccessViolation    |   ✓    |      ✓      |         ✓         | ForceCrash AccessViolation
 | Native: Abort              |   ✓    |      ✓      |         ✓         | ForceCrash Abort
 | Native: FatalError         |   ✓    |      ✓      |         ✓         | ForceCrash FatalError
@@ -39,6 +46,9 @@ iOS (ios-arm64)
 | Hang: Android ANR (10s)    |   —    |      —      |         —         | Not applicable on iOS
 | Hang: Desktop (10s)        |   —    |      —      |         —         | Use for macOS/Windows only
 | OOM: Heap                  |   ~    |      ✓      |         ~         | Crashlytics reports iOS OOMs
+| IO: File Write Denied      |   ✓    |      ✓      |         ✓         | UnauthorizedAccess/IOException
+| Data: JSON Parse Error     |   ✓    |      ✓      |         ✓         | FormatException
+| Lifecycle: Use After Dispose | ✓    |      ✓      |         ✓         | ObjectDisposedException
 | Startup: Managed Unhandled |   ✓    |      ✓      |         ✓         | Triggered at app start
 
 macOS (macos-arm64)
@@ -48,6 +58,8 @@ macOS (macos-arm64)
 | Managed: NullRef/DivZero   |   ✓    |      —      |         ✓         | Crashlytics not in matrix for macOS
 | Managed: Unhandled         |   ✓    |      —      |         ✓         | throw new Exception
 | Managed: Unobserved Task   |   ~    |      —      |         ~         | Delivery varies; not always fatal
+| Thread: Background/Pool    |   ✓    |      —      |         ✓         | Unhandled exception on worker thread
+| Thread: Unity API (worker) |   ~    |      —      |         ~         | Usually logs error; may not crash
 | Native: AccessViolation    |   ✓    |      —      |         ✓         | ForceCrash AccessViolation
 | Native: Abort              |   ✓    |      —      |         ✓         | ForceCrash Abort
 | Native: FatalError         |   ✓    |      —      |         ✓         | ForceCrash FatalError
@@ -55,6 +67,9 @@ macOS (macos-arm64)
 | Hang: Android ANR (10s)    |   —    |      —      |         —         | Not applicable on macOS
 | Hang: Desktop (10s)        |   —    |      —      |         —         | Hangs aren’t reported as crashes
 | OOM: Heap                  |   ~    |      —      |         ~         | Process-kill; capture varies
+| IO: File Write Denied      |   ✓    |      —      |         ✓         | UnauthorizedAccess/IOException
+| Data: JSON Parse Error     |   ✓    |      —      |         ✓         | FormatException
+| Lifecycle: Use After Dispose | ✓    |      —      |         ✓         | ObjectDisposedException
 | Startup: Managed Unhandled |   ✓    |      —      |         ✓         | Triggered at app start
 
 Windows (windows-x64)
@@ -64,6 +79,8 @@ Windows (windows-x64)
 | Managed: NullRef/DivZero   |   ✓    |      —      |         ✓         | Crashlytics not in matrix for Windows
 | Managed: Unhandled         |   ✓    |      —      |         ✓         | throw new Exception
 | Managed: Unobserved Task   |   ~    |      —      |         ~         | Delivery varies; not always fatal
+| Thread: Background/Pool    |   ✓    |      —      |         ✓         | Unhandled exception on worker thread
+| Thread: Unity API (worker) |   ~    |      —      |         ~         | Usually logs error; may not crash
 | Native: AccessViolation    |   ✓    |      —      |         ✓         | ForceCrash AccessViolation
 | Native: Abort              |   ✓    |      —      |         ✓         | ForceCrash Abort
 | Native: FatalError         |   ✓    |      —      |         ✓         | ForceCrash FatalError
@@ -71,6 +88,9 @@ Windows (windows-x64)
 | Hang: Android ANR (10s)    |   —    |      —      |         —         | Not applicable on Windows
 | Hang: Desktop (10s)        |   —    |      —      |         —         | Hangs aren’t reported as crashes
 | OOM: Heap                  |   ~    |      —      |         ~         | Process-kill; capture varies
+| IO: File Write Denied      |   ✓    |      —      |         ✓         | UnauthorizedAccess/IOException
+| Data: JSON Parse Error     |   ✓    |      —      |         ✓         | FormatException
+| Lifecycle: Use After Dispose | ✓    |      —      |         ✓         | ObjectDisposedException
 | Startup: Managed Unhandled |   ✓    |      —      |         ✓         | Triggered at app start
 
 General notes
@@ -79,4 +99,3 @@ General notes
 - Desktop hang is for manual evaluation of watchdog behavior; it’s not a crash and isn’t reported by crash SDKs.
 - Android ANR is reported by Crashlytics and Sentry Android; Unity Cloud Diagnostics does not report ANR.
 - Ensure symbol uploads are enabled for accurate native stack traces.
-
