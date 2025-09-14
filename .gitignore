@@ -1,0 +1,61 @@
+# Unity
+/Library/
+/Temp/
+/Obj/
+/Build/
+/Builds/
+/Logs/
+/UserSettings/
+/MemoryCaptures/
+/Recordings/
+
+# IDE/Editor
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userprefs
+*.tmp
+*.booproj
+*.svd
+*.pidb
+*.sln
+*.csproj
+*.unityproj
+*.vcxproj*
+*.mdb
+*.opendb
+*.VC.db
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Unity Player logs (runtime)
+**/Player.log
+**/Player-prev.log
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+*.app
+*.exe
+*.dll
+*.pdb
+*.dSYM
+*.zip
+*.tar
+*.tgz
+
+# Keep Unity meta files tracked
+!*.meta
+
+# Android/Gradle (exported projects)
+/.gradle/
+/gradle/
+*.gradle
+
