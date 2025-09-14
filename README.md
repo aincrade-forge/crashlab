@@ -42,6 +42,11 @@ Example CLI (adjust path/version):
   - Link the project to UGS in Project Settings → Services, and set the desired environment.
   - The app sets `userId` and custom metadata (run_id, commit_sha, build_number, dev_mode, backend, platform, server_name).
 
+## Crashlytics via Tarballs + Git LFS
+- We vendor Firebase tarballs in `Packages/vendor/` with versioned filenames and track them in Git LFS.
+- See `docs/CRASHLYTICS_SETUP.md` for steps to add/replace tarballs and credentials files.
+- Ensure `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are present under `Assets/`.
+
 ## Contributing
 - Read `AGENTS.md` for repository conventions (structure, style, tests, PRs).
 - Use Conventional Commits (e.g., `feat(player): add dash`).

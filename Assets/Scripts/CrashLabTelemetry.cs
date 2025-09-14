@@ -7,6 +7,8 @@ using Sentry;
 #endif
 
 #if DIAG_CRASHLYTICS
+using Firebase;
+using Firebase.Extensions;
 using Firebase.Crashlytics;
 #endif
 
@@ -83,19 +85,7 @@ namespace CrashLab
                 Debug.LogWarning($"CrashLabTelemetry(Sentry) init error: {e.Message}");
             }
 #elif DIAG_CRASHLYTICS
-            try
-            {
-                Crashlytics.SetUserId(userId);
-                foreach (var kv in Meta)
-                {
-                    Crashlytics.SetCustomKey(kv.Key, kv.Value);
-                }
-                Crashlytics.Log($"CrashLab init run_id={runId}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CrashLabTelemetry(Crashlytics) init error: {e.Message}");
-            }
+            InitializeCrashlyticsAsync(userId, Meta);
 #elif DIAG_UNITY
             try
             {
@@ -202,6 +192,41 @@ namespace CrashLab
             catch (Exception e)
             {
                 Debug.LogWarning($"CloudDiagnostics CrashReporting init failed: {e.Message}");
+            }
+        }
+#endif
+
+#if DIAG_CRASHLYTICS
+        private static async void InitializeCrashlyticsAsync(string userId, IReadOnlyDictionary<string, string> meta)
+        {
+            try
+            {
+                var status = await FirebaseApp.CheckAndFixDependenciesAsync();
+                if (status != DependencyStatus.Available)
+                {
+                    Debug.LogWarning($"Firebase dependencies not available: {status}");
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Firebase CheckAndFixDependenciesAsync failed: {e.Message}");
+                return;
+            }
+
+            try
+            {
+                Crashlytics.IsCrashlyticsCollectionEnabled = true;
+                Crashlytics.SetUserId(userId);
+                foreach (var kv in meta)
+                {
+                    Crashlytics.SetCustomKey(kv.Key, kv.Value);
+                }
+                Crashlytics.Log("CrashLab Crashlytics initialized");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Crashlytics init failed: {e.Message}");
             }
         }
 #endif
