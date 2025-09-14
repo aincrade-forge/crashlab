@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEditor.TestTools.TestRunner.Api;
 
     public static class BuildScripts
     {
@@ -18,6 +19,43 @@ using UnityEditor.Build.Reporting;
                 var development = GetEnv("DEV_MODE", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
                 var path = BuildOnce(target, flavor, development, output);
                 Log($"Build succeeded → {path}");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex.ToString());
+                EditorApplication.Exit(1);
+            }
+        }
+
+        // Entry point for CLI: -executeMethod BuildScripts.BuildMatrix
+        // Optional env: TARGETS="windows-x64,macos-arm64,android-arm64,ios-arm64"
+        //                FLAVORS="sentry,unity,crashlytics"  DEV_MODE=true/false
+        public static void BuildMatrix()
+        {
+            try
+            {
+                var targets = (GetEnv("TARGETS", "windows-x64,macos-arm64,android-arm64,ios-arm64")
+                    .Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToArray();
+                var dev = GetEnv("DEV_MODE", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
+
+                foreach (var t in targets)
+                {
+                    foreach (var flavor in FlavorsForTarget(t))
+                    {
+                        Log($"=== Building {t} / {flavor} (dev={dev}) ===");
+                        try
+                        {
+                            var path = BuildOnce(t, flavor, dev);
+                            Log($"OK: {t}/{flavor} → {path}");
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError($"FAIL: {t}/{flavor}: {ex.Message}");
+                            throw; // stop matrix on first failure
+                        }
+                    }
+                }
                 EditorApplication.Exit(0);
             }
             catch (Exception ex)
@@ -81,6 +119,24 @@ using UnityEditor.Build.Reporting;
                 return (BuildTarget.StandaloneOSX, BuildTargetGroup.Standalone);
             case "windows-x64":
                 return (BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported TARGET value");
+        }
+    }
+
+    // Define telemetry flavors supported per target platform
+    private static string[] FlavorsForTarget(string target)
+    {
+        switch (target)
+        {
+            case "windows-x64":
+                return new[] { "sentry", "unity" }; // Crashlytics not supported on Windows
+            case "macos-arm64":
+                return new[] { "sentry", "unity" }; // Crashlytics not supported on desktop macOS
+            case "android-arm64":
+                return new[] { "sentry", "crashlytics", "unity" };
+            case "ios-arm64":
+                return new[] { "sentry", "crashlytics", "unity" };
             default:
                 throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported TARGET value");
         }
@@ -254,6 +310,110 @@ using UnityEditor.Build.Reporting;
             LogError($"Failed to write build metadata: {e.Message}");
         }
     }
+
+    // ----- Test Matrix -----
+
+    // CLI entry: -executeMethod BuildScripts.TestMatrix
+    // Runs EditMode tests per flavor for the active Editor platform.
+    // Env: FLAVORS to limit set (default: per current platform), STOP_ON_FAIL=true (default true)
+    public static void TestMatrix()
+    {
+        try
+        {
+            var current = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 ? "windows-x64"
+                        : EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneOSX ? "macos-arm64"
+                        : EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android ? "android-arm64"
+                        : EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS ? "ios-arm64"
+                        : "macos-arm64";
+
+            var stopOnFail = !GetEnv("STOP_ON_FAIL", "true").Equals("false", StringComparison.OrdinalIgnoreCase);
+            var flavorsEnv = GetEnv("FLAVORS", null);
+            var flavors = !string.IsNullOrEmpty(flavorsEnv)
+                ? flavorsEnv.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToArray()
+                : FlavorsForTarget(current);
+
+            foreach (var f in flavors)
+            {
+                try
+                {
+                    RunEditModeTestsForFlavor(f);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Tests failed for flavor={f}: {ex.Message}");
+                    if (stopOnFail) throw;
+                }
+            }
+
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            LogError(ex.ToString());
+            EditorApplication.Exit(1);
+        }
+    }
+
+    private static void RunEditModeTestsForFlavor(string flavor)
+    {
+        // Switch defines via same flavor config used in builds
+        var (_, group) = MapTarget(GuessTargetKeyFromActive());
+        ConfigureFlavor(group, EditorUserBuildSettings.activeBuildTarget, flavor);
+
+        var api = new TestRunnerApi();
+        var filter = new Filter()
+        {
+            testMode = TestMode.EditMode
+        };
+
+        var done = false; bool success = false;
+        api.RegisterCallbacks(new TestCallbacks(r => { success = r; done = true; }));
+        api.Execute(new ExecutionSettings(filter));
+
+        // Busy wait until callback signals completion (Editor-only context)
+        var start = DateTime.UtcNow;
+        while (!done)
+        {
+            if ((DateTime.UtcNow - start).TotalMinutes > 10)
+            {
+                throw new TimeoutException("EditMode tests timed out");
+            }
+            System.Threading.Thread.Sleep(100);
+        }
+
+        if (!success)
+            throw new Exception("EditMode tests failed");
+        Log($"EditMode tests passed for flavor={flavor}");
+    }
+
+    private class TestCallbacks : ICallbacks
+    {
+        private readonly Action<bool> _done;
+        private bool _ok = true;
+        public TestCallbacks(Action<bool> done) { _done = done; }
+        public void RunStarted(ITestAdaptor testsToRun) {}
+        public void RunFinished(ITestResultAdaptor result)
+        {
+            _ok = result.FailCount == 0 && result.InconclusiveCount == 0 && result.SkipCount == 0;
+            _done?.Invoke(_ok);
+        }
+        public void TestStarted(ITestAdaptor test) {}
+        public void TestFinished(ITestResultAdaptor result)
+        {
+            if (result.ResultStateStatus == TestResultState.Failed)
+                _ok = false;
+        }
+    }
+
+    private static string GuessTargetKeyFromActive()
+        => EditorUserBuildSettings.activeBuildTarget switch
+        {
+            BuildTarget.Android => "android-arm64",
+            BuildTarget.iOS => "ios-arm64",
+            BuildTarget.StandaloneWindows64 => "windows-x64",
+            BuildTarget.StandaloneOSX => "macos-arm64",
+            _ => "macos-arm64"
+        };
 
     private static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
