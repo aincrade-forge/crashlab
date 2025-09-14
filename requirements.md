@@ -99,9 +99,9 @@ The Crash Lab app **must** support non-UI triggers so the agent can run unattend
 
 ### FR-7: Verification
 - **Level 0 (mandatory)**: Confirm from logs that the action ran (`CRASHLAB::<ACTION>::START`) and the app terminated when expected (for native crash/ANR tests).
-- **Level 1 (Sentry)**: Use Sentry API (auth token) to assert at least one event ingested for `release`, `environment`, and `RUN_ID` tag.
-- **Level 1 (Crashlytics)**: If **BigQuery export is enabled**, run a parameterized query to assert at least one matching event for the build fingerprint and `RUN_ID`. If BigQuery is not enabled, verification remains manual (agent records a console link and context).
-- **Level 1 (Unity Diagnostics)**: If the Unity Dashboard exposes APIs in your org, query them; otherwise, record a console URL and context for manual verification.
+- **Level 1 (Sentry)**: Use Sentry API (auth token) to assert at least one event ingested for the run and that required metadata is present: `release`, `environment`, `run_id`, `backend`, `platform`, `commit_sha`, `build_number`, `dev_mode`, and `user.id`.
+- **Level 1 (Crashlytics)**: If **BigQuery export is enabled**, assert one event for the run and presence of custom keys `run_id`, `commit_sha`, `dev_mode`, and user id. If BigQuery is not enabled, verification remains manual (agent records a console link and context).
+- **Level 1 (Unity Diagnostics)**: If the Unity Dashboard exposes APIs in your org, query them; otherwise, record a console URL and confirm metadata presence via message context or breadcrumbs (run id, backend, platform).
 
 ### FR-8: Reporting
 - Produce a run summary (JSON + Markdown) per matrix entry:
@@ -118,6 +118,13 @@ The Crash Lab app **must** support non-UI triggers so the agent can run unattend
 ### FR-10: Secrets hygiene
 - Never print DSNs, tokens, service-account JSON, or keystore passwords in logs.
 - Store secrets in CI secret manager; provide them to the agent via environment variables or short-lived files.
+
+### FR-11: Metadata stamping & user context
+- Every captured event/crash must include the following fields (via SDK-native mechanisms where supported):
+  - `user.id`, `run_id`, `release`, `environment`, `backend`, `platform`, `dev_mode`, `commit_sha`, `build_number`.
+  - Optional where available: `server_name` (desktop), `device_id`, `device_model`, `scene`, `session_id`, `ci`, `app_start_ts`.
+- Implement a single initialization point in-app that sets these for the active backend.
+- Startup crashes should still include `run_id`, `release`, `environment`, and `backend/platform` at minimum.
 
 ---
 
@@ -146,6 +153,12 @@ The Crash Lab app **must** support non-UI triggers so the agent can run unattend
 - `RUN_ID` — unique identifier per agent run (default: timestamp + short SHA).  
 - `RELEASE_NAME` — e.g., `crashlab-<flavor>-<semver>+<build>`  
 - `UNITY_VERSION` — e.g., `2022.3.XXf1` or `6000.0.XXf1`
+- `COMMIT_SHA` — commit fingerprint for tagging (e.g., CI-provided SHA).
+- `BUILD_NUMBER` — monotonically increasing build number.
+- `DEV_MODE` — `true/false` to tag dev builds.
+- `SERVER_NAME` — host name for desktop runs (optional; auto-detected if unset).
+- `CI` — `true/false` when running under CI.
+- `USER_ID` — explicit identifier to set as `user.id` (optional; generate pseudonymous if unset).
 
 **Sentry**
 - `SENTRY_DSN`
@@ -195,6 +208,17 @@ verification:
 ---
 
 ## 6) Workflows
+
+### 6.0 Telemetry initialization (in-app)
+
+At first scene load, initialize telemetry for the active backend so that all subsequent errors/crashes carry required metadata and user context.
+
+- Parse env/CLI (`RUN_ID`, `RELEASE_NAME`, `COMMIT_SHA`, `BUILD_NUMBER`, `DEV_MODE`, `SERVER_NAME`, `CI`, `USER_ID`).
+- Set SDK fields via preprocessor flags:
+  - `#if DIAG_SENTRY` — set `User.Id`, tags (`run_id`, `backend`, `platform`, `commit_sha`, `build_number`, `dev_mode`, `ci`, `server_name`), `Environment`, and `Release`.
+  - `#elif DIAG_CRASHLYTICS` — set `SetUserId(...)` and custom keys (`run_id`, `commit_sha`, `dev_mode`, `ci`, etc.).
+  - `#elif DIAG_UNITY` — attach metadata through SDK/context if available; otherwise mirror into structured breadcrumbs and log prefixes.
+- Mirror Unity logs to backend breadcrumbs/logs via `Application.logMessageReceived`.
 
 ### 6.1 Build
 
@@ -269,6 +293,7 @@ xcrun simctl openurl booted "crashlab://action/managed_exception"
 
 ### 6.6 Report
 - Emit `report.json` (machine readable) and `report.md` (human friendly) per job, plus a top-level `summary.md` across the matrix.
+  - Include a metadata section per event with resolved `user.id`, tags, and any missing/unsupported fields by backend.
 
 ---
 
@@ -318,6 +343,7 @@ agent run-matrix --config agent.yml
 - **App doesn’t crash on native action** → retry once; if still no crash, mark as failure and attach logs.  
 - **Crash loop on relaunch** → the app should reset the trigger flag after executing it once.  
 - **Network issues** → retry API calls and package uploads with exponential backoff.
+- **Startup crash before init** → perform minimal pre-init to stamp `run_id`, `release`, `environment`, `backend`, `platform` so these appear even if a crash happens very early.
 
 ---
 
