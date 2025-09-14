@@ -22,3 +22,18 @@ At runtime `CrashLabTelemetry` initializes Sentry with:
 
 ## 4) Symbols
 - For accurate native/IL2CPP stack traces, upload symbols per platform. See `requirements.md` for guidance and automation notes.
+
+## 5) Verification
+- Capture a test message from the Editor: CrashLab → Sentry → Capture Test Message.
+- Trigger a crash via in‑game UI or headless triggers and verify the event.
+- Scripted check (requires `sentry-cli`):
+```
+RUN_ID=demo-run SENTRY_ORG=<org> SENTRY_PROJECT=<project> SENTRY_AUTH_TOKEN=<token> \
+  ./scripts/sentry_verify.sh
+```
+
+## 6) Auto Symbol Uploads
+- The post‑build hook attempts to upload symbols by default:
+  - macOS/Android → uploads when Sentry env is configured.
+  - iOS → upload after Xcode archive using `scripts/sentry_upload_symbols.sh`.
+- Opt‑out: set `CRASHLAB_NO_UPLOAD_SYMBOLS=true` before building.

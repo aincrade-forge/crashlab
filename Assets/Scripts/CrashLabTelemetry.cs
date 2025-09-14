@@ -81,6 +81,9 @@ namespace CrashLab
                     if (!string.IsNullOrWhiteSpace(dsn)) o.Dsn = dsn;
                     o.Release = release;
                     o.Environment = environment;
+                    o.AutoSessionTracking = true;
+                    o.CaptureInEditor = true; // useful for quick local validation
+                    o.AttachStacktrace = true;
                 });
 
                 SentrySdk.ConfigureScope(scope =>
