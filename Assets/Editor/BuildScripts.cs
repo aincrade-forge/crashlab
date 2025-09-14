@@ -31,7 +31,7 @@ using UnityEditor.Build.Reporting;
         public static string BuildOnce(string target, string flavor, bool development, string output = "")
         {
             var (buildTarget, group) = MapTarget(target);
-            ConfigureFlavor(group, flavor);
+            ConfigureFlavor(group, buildTarget, flavor);
             ConfigureIdentifiers(group, target, flavor);
             ConfigureIl2Cpp(group, buildTarget, target);
 
@@ -85,9 +85,10 @@ using UnityEditor.Build.Reporting;
         }
     }
 
-    private static void ConfigureFlavor(BuildTargetGroup group, string flavor)
+    private static void ConfigureFlavor(BuildTargetGroup group, BuildTarget buildTarget, string flavor)
     {
-        var defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(group) ?? string.Empty;
+        var named = GetNamedBuildTarget(group, buildTarget);
+        var defines = PlayerSettings.GetScriptingDefineSymbols(named) ?? string.Empty;
         string[] clear = { "DIAG_SENTRY", "DIAG_CRASHLYTICS", "DIAG_UNITY" };
         foreach (var c in clear)
             defines = RemoveDefine(defines, c);
@@ -99,7 +100,7 @@ using UnityEditor.Build.Reporting;
             _ => "DIAG_UNITY",
         };
         defines = AddDefine(defines, add);
-        PlayerSettings.SetScriptingDefineSymbolsForGroup(group, defines);
+        PlayerSettings.SetScriptingDefineSymbols(named, defines);
         Log($"Flavor set: {flavor} → define {add}");
     }
 
@@ -118,7 +119,8 @@ using UnityEditor.Build.Reporting;
 
     private static void ConfigureIl2Cpp(BuildTargetGroup group, BuildTarget target, string targetKey)
     {
-        PlayerSettings.SetScriptingBackend(group, ScriptingImplementation.IL2CPP);
+        var named = GetNamedBuildTarget(group, target);
+        PlayerSettings.SetScriptingBackend(named, ScriptingImplementation.IL2CPP);
 
         if (target == BuildTarget.Android)
         {
@@ -144,6 +146,26 @@ using UnityEditor.Build.Reporting;
         }
     }
 
+    private static NamedBuildTarget GetNamedBuildTarget(BuildTargetGroup group, BuildTarget target)
+    {
+        switch (target)
+        {
+            case BuildTarget.Android:
+                return NamedBuildTarget.Android;
+            case BuildTarget.iOS:
+                return NamedBuildTarget.iOS;
+            case BuildTarget.StandaloneWindows:
+            case BuildTarget.StandaloneWindows64:
+            case BuildTarget.StandaloneOSX:
+            case BuildTarget.StandaloneLinux64:
+                return NamedBuildTarget.Standalone;
+            default:
+                // Fallback to mapping by group when possible
+                try { return NamedBuildTarget.FromBuildTargetGroup(group); }
+                catch { return NamedBuildTarget.Standalone; }
+        }
+    }
+
     private static void ConfigureIdentifiers(BuildTargetGroup group, string targetKey, string flavor)
     {
         // Allow explicit IDs via env vars; fall back to sensible defaults per flavor
@@ -162,23 +184,23 @@ using UnityEditor.Build.Reporting;
         {
             case "android-arm64":
                 var finalAndroid = genericId ?? androidId ?? DefaultFor("android");
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, finalAndroid);
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, finalAndroid);
                 Log($"Android applicationId: {finalAndroid}");
                 break;
             case "ios-arm64":
                 var finalIos = genericId ?? iosId ?? DefaultFor("ios");
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, finalIos);
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, finalIos);
                 Log($"iOS bundle id: {finalIos}");
                 break;
             case "macos-arm64":
                 // Optional: set standalone identifier (not strictly required)
                 var finalMac = genericId ?? DefaultFor("macos");
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Standalone, finalMac);
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, finalMac);
                 Log($"macOS bundle id: {finalMac}");
                 break;
             case "windows-x64":
                 var finalWin = genericId ?? DefaultFor("windows");
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Standalone, finalWin);
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, finalWin);
                 Log($"Windows product id: {finalWin}");
                 break;
         }
