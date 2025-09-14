@@ -82,7 +82,7 @@ namespace CrashLab.UI
                 case ActionType.AndroidAnr10: return () => CrashActions.AndroidAnr(10);
                 case ActionType.DesktopHang10: return () => CrashActions.DesktopHang(10);
                 case ActionType.OomHeap: return CrashActions.OomHeap;
-                case ActionType.ScheduleStartupCrash: return CrashActions.ScheduleStartupCrash;
+                case ActionType.ScheduleStartupCrash: return () => CrashActions.ScheduleStartupCrash();
                 default: return null;
             }
         }

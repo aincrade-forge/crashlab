@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,7 +8,7 @@ namespace CrashLab.UI
     [RequireComponent(typeof(Button))]
     public class CrashUIButton : MonoBehaviour
     {
-        [SerializeField] private Text _label;
+        [SerializeField] private TMP_Text _label;
         [SerializeField] private Button _button;
 
         private void Reset()
@@ -15,7 +16,7 @@ namespace CrashLab.UI
             if (_button == null) _button = GetComponent<Button>();
             if (_label == null)
             {
-                _label = GetComponentInChildren<Text>();
+                _label = GetComponentInChildren<TMP_Text>();
             }
         }
 
