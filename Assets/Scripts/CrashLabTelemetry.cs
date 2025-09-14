@@ -10,6 +10,13 @@ using Sentry;
 using Firebase.Crashlytics;
 #endif
 
+#if DIAG_UNITY
+using System.Threading.Tasks;
+using Unity.Services.Core;
+using Unity.Services.Core.Environments;
+using Unity.Services.CloudDiagnostics;
+#endif
+
 namespace CrashLab
 {
     public static class CrashLabTelemetry
@@ -37,8 +44,10 @@ namespace CrashLab
                 "sentry";
 #elif DIAG_CRASHLYTICS
                 "crashlytics";
-#else
+#elif DIAG_UNITY
                 "unity";
+#else
+                "unknown";
 #endif
 
             var platform = Application.platform.ToString().ToLowerInvariant();
@@ -87,6 +96,15 @@ namespace CrashLab
             {
                 Debug.LogWarning($"CrashLabTelemetry(Crashlytics) init error: {e.Message}");
             }
+#elif DIAG_UNITY
+            try
+            {
+                InitializeUnityDiagnosticsAsync(environment, userId, Meta);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"CrashLabTelemetry(UnityDiag) init error: {e.Message}");
+            }
 #else
             Debug.Log($"CRASHLAB::META::{ToKvpString(Meta)}");
 #endif
@@ -113,6 +131,8 @@ namespace CrashLab
             SentrySdk.AddBreadcrumb(condition, category: "unity.log", level: level);
 #elif DIAG_CRASHLYTICS
             Crashlytics.Log(condition);
+#elif DIAG_UNITY
+            // Cloud Diagnostics has no breadcrumbs; metadata and logs will aid context.
 #else
             // Nothing extra; logs already in Player.log
 #endif
@@ -154,6 +174,34 @@ namespace CrashLab
             }
             return string.Join(",", parts);
         }
+
+#if DIAG_UNITY
+        private static async void InitializeUnityDiagnosticsAsync(string environment, string userId, IReadOnlyDictionary<string, string> meta)
+        {
+            try
+            {
+                var options = new InitializationOptions().SetEnvironmentName(environment);
+                await UnityServices.InitializeAsync(options);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"UnityServices.InitializeAsync failed: {e.Message}");
+                // continue; Cloud Diagnostics may still be unavailable
+            }
+
+            try
+            {
+                CloudDiagnostics.Instance.SetUserId(userId);
+                var md = new Dictionary<string, object>();
+                foreach (var kv in meta) md[kv.Key] = kv.Value;
+                CloudDiagnostics.Instance.SetCustomMetadata(md);
+                Debug.Log("CRASHLAB::UNITY_DIAGNOSTICS::initialized");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"CloudDiagnostics init failed: {e.Message}");
+            }
+        }
+#endif
     }
 }
-

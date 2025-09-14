@@ -37,7 +37,10 @@ Example CLI (adjust path/version):
 ## Telemetry & Metadata
 - The app sets common metadata at startup (see `Assets/Scripts/CrashLabTelemetry.cs`).
 - Provide env vars to stamp events: `RUN_ID`, `RELEASE_NAME`, `ENVIRONMENT`, `COMMIT_SHA`, `BUILD_NUMBER`, `DEV_MODE`, `USER_ID`, `CI`, `SERVER_NAME`.
-- Sentry/Crashlytics are configured under `DIAG_SENTRY` / `DIAG_CRASHLYTICS` defines; otherwise logs include a `CRASHLAB::META::` line.
+- Sentry/Crashlytics are configured under `DIAG_SENTRY` / `DIAG_CRASHLYTICS` defines.
+- Unity Diagnostics (Cloud Diagnostics) initializes under `DIAG_UNITY` using UGS (`com.unity.services.core`, `com.unity.services.cloud-diagnostics`).
+  - Link the project to UGS in Project Settings → Services, and set the desired environment.
+  - The app sets `userId` and custom metadata (run_id, commit_sha, build_number, dev_mode, backend, platform, server_name).
 
 ## Contributing
 - Read `AGENTS.md` for repository conventions (structure, style, tests, PRs).
