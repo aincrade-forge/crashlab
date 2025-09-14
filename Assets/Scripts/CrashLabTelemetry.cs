@@ -2,30 +2,13 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-#if DIAG_SENTRY
-using Sentry;
-using Sentry.Unity;
-#endif
-
-#if DIAG_CRASHLYTICS
-using Firebase;
-using Firebase.Extensions;
-using Firebase.Crashlytics;
-#endif
-
-#if DIAG_UNITY
-using System.Threading.Tasks;
-using Unity.Services.Core;
-using Unity.Services.Core.Environments;
-using Unity.Services.CloudDiagnostics; // CrashReporting API lives here
-#endif
-
 namespace CrashLab
 {
     public static class CrashLabTelemetry
     {
         private static bool _initialized;
         private static readonly Dictionary<string, string> Meta = new();
+        private static ITelemetryService _service;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Initialize()
@@ -70,47 +53,9 @@ namespace CrashLab
             Meta["user_id"] = userId;
             Meta["app_start_ts"] = DateTime.UtcNow.ToString("o");
 
-            // Apply to active backend
-#if DIAG_SENTRY
-            try
-            {
-                // Initialize Sentry Unity SDK if not initialized via settings
-                var dsn = GetEnv("SENTRY_DSN", null);
-                SentryUnity.Init(o =>
-                {
-                    if (!string.IsNullOrWhiteSpace(dsn)) o.Dsn = dsn;
-                    o.Release = release;
-                    o.Environment = environment;
-                    o.AutoSessionTracking = true;
-                    o.CaptureInEditor = true; // useful for quick local validation
-                    o.AttachStacktrace = true;
-                });
-
-                SentrySdk.ConfigureScope(scope =>
-                {
-                    scope.User = new User { Id = userId };
-                    SetSentryTags(scope, Meta);
-                });
-                SentrySdk.AddBreadcrumb($"CrashLab init run_id={runId}", category: "crashlab", level: BreadcrumbLevel.Info);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CrashLabTelemetry(Sentry) init error: {e.Message}");
-            }
-#elif DIAG_CRASHLYTICS
-            InitializeCrashlyticsAsync(userId, Meta);
-#elif DIAG_UNITY
-            try
-            {
-                InitializeUnityDiagnosticsAsync(environment, userId, Meta);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CrashLabTelemetry(UnityDiag) init error: {e.Message}");
-            }
-#else
-            Debug.Log($"CRASHLAB::META::{ToKvpString(Meta)}");
-#endif
+            // Resolve and initialize telemetry service
+            _service = CreateService();
+            _service.Initialize(userId, Meta, release, environment);
 
             Application.logMessageReceived += OnLog;
             Debug.Log($"CRASHLAB::INIT::run_id={runId}");
@@ -118,28 +63,8 @@ namespace CrashLab
 
         private static void OnLog(string condition, string stackTrace, LogType type)
         {
-#if DIAG_SENTRY
-            // Sentry Unity SDK already captures Unity logs as breadcrumbs.
-            // Avoid duplicating breadcrumbs here.
-#elif DIAG_CRASHLYTICS
-            Crashlytics.Log(condition);
-#elif DIAG_UNITY
-            // Cloud Diagnostics has no breadcrumbs API; logs + metadata provide context.
-#else
-            // Nothing extra; logs already in Player.log
-#endif
+            _service?.OnLog(condition, stackTrace, type);
         }
-
-#if DIAG_SENTRY
-        private static void SetSentryTags(Scope scope, IReadOnlyDictionary<string, string> dict)
-        {
-            foreach (var kv in dict)
-            {
-                // Prefer tags so they show up prominently
-                scope.SetTag(kv.Key, kv.Value);
-            }
-        }
-#endif
 
         private static string GetEnv(string key, string fallback)
             => Environment.GetEnvironmentVariable(key) ?? fallback;
@@ -154,70 +79,17 @@ namespace CrashLab
             return string.Join(",", parts);
         }
 
-#if DIAG_UNITY
-        private static async void InitializeUnityDiagnosticsAsync(string environment, string userId, IReadOnlyDictionary<string, string> meta)
+        private static ITelemetryService CreateService()
         {
-            try
-            {
-                var options = new InitializationOptions().SetEnvironmentName(environment);
-                await UnityServices.InitializeAsync(options);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"UnityServices.InitializeAsync failed: {e.Message}");
-                // continue; Cloud Diagnostics may still be unavailable
-            }
-
-            try
-            {
-                // UGS Cloud Diagnostics Crash Reporting API
-                UnityEngine.CrashReportHandler.CrashReportHandler.SetUserMetadata("user_id", userId);
-                foreach (var kv in meta) 
-                {
-                  UnityEngine.CrashReportHandler.CrashReportHandler.SetUserMetadata(kv.Key, kv.Value);
-                }
-                Debug.Log("CRASHLAB::UNITY_DIAGNOSTICS::initialized");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CloudDiagnostics CrashReporting init failed: {e.Message}");
-            }
-        }
+#if DIAG_SENTRY
+            return new SentryTelemetryService();
+#elif DIAG_CRASHLYTICS
+            return new CrashlyticsTelemetryService();
+#elif DIAG_UNITY
+            return new UnityDiagnosticsTelemetryService();
+#else
+            return new NoTelemetryService();
 #endif
-
-#if DIAG_CRASHLYTICS
-        private static async void InitializeCrashlyticsAsync(string userId, IReadOnlyDictionary<string, string> meta)
-        {
-            try
-            {
-                var status = await FirebaseApp.CheckAndFixDependenciesAsync();
-                if (status != DependencyStatus.Available)
-                {
-                    Debug.LogWarning($"Firebase dependencies not available: {status}");
-                    return;
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Firebase CheckAndFixDependenciesAsync failed: {e.Message}");
-                return;
-            }
-
-            try
-            {
-                Crashlytics.IsCrashlyticsCollectionEnabled = true;
-                Crashlytics.SetUserId(userId);
-                foreach (var kv in meta)
-                {
-                    Crashlytics.SetCustomKey(kv.Key, kv.Value);
-                }
-                Crashlytics.Log("CrashLab Crashlytics initialized");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Crashlytics init failed: {e.Message}");
-            }
         }
-#endif
     }
 }

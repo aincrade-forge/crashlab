@@ -64,7 +64,7 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         }
         else if (target == BuildTarget.iOS)
         {
-            var gsp = "Assets/GoogleService-Info.plist";
+            // var gsp = "Assets/GoogleService-Info.plist";
             UnityEngine.Debug.Log("[Crashlytics] iOS dSYMs are generated on archive. Run upload after Xcode archive.");
             // Optionally run: IOS=true GOOGLE_SERVICE_INFO_PLIST=gsp IOS_DSYM_DIR=path ./scripts/crashlytics_upload_symbols.sh
         }
