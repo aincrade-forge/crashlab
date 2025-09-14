@@ -14,6 +14,18 @@ public static class CrashLabBuildMenu
         RunBuild("ios-arm64", "crashlytics", false);
     }
 
+    [MenuItem("CrashLab/Build/Android • Sentry (APK)", priority = 102)]
+    public static void BuildAndroidSentry()
+    {
+        RunBuild("android-arm64", "sentry", false);
+    }
+
+    [MenuItem("CrashLab/Build/iOS • Sentry (Xcode)", priority = 103)]
+    public static void BuildIOSSentry()
+    {
+        RunBuild("ios-arm64", "sentry", false);
+    }
+
     [MenuItem("CrashLab/Build/macOS • Unity (App)", priority = 110)]
     public static void BuildMacUnity()
     {
@@ -47,4 +59,3 @@ public static class CrashLabBuildMenu
         }
     }
 }
-

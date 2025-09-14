@@ -4,6 +4,7 @@ using UnityEngine;
 
 #if DIAG_SENTRY
 using Sentry;
+using Sentry.Unity;
 #endif
 
 #if DIAG_CRASHLYTICS
@@ -33,14 +34,14 @@ namespace CrashLab
             _initialized = true;
 
             // Resolve metadata from env or defaults
-            var runId = GetEnv("RUN_ID", Guid.NewGuid().ToString("N"));
+            var runId = GetEnv("RUN_ID", "demo-run");
             var release = GetEnv("RELEASE_NAME", Application.version);
             var environment = GetEnv("ENVIRONMENT", "dev");
-            var commitSha = GetEnv("COMMIT_SHA", "local");
-            var buildNumber = GetEnv("BUILD_NUMBER", Application.buildGUID);
-            var devMode = GetEnv("DEV_MODE", Debug.isDebugBuild ? "true" : "false");
+            var commitSha = GetEnv("COMMIT_SHA", "demo-sha");
+            var buildNumber = GetEnv("BUILD_NUMBER", "100");
+            var devMode = GetEnv("DEV_MODE", "true");
             var ci = GetEnv("CI", "false");
-            var serverName = GetEnv("SERVER_NAME", SystemInfo.deviceName);
+            var serverName = GetEnv("SERVER_NAME", "demo-machine");
             var backend =
 #if DIAG_SENTRY
                 "sentry";
@@ -54,7 +55,7 @@ namespace CrashLab
 
             var platform = Application.platform.ToString().ToLowerInvariant();
 
-            var userId = GetEnv("USER_ID", LoadOrCreateUserId());
+            var userId = GetEnv("USER_ID", "jin");
 
             Meta["run_id"] = runId;
             Meta["release"] = release;
@@ -73,6 +74,15 @@ namespace CrashLab
 #if DIAG_SENTRY
             try
             {
+                // Initialize Sentry Unity SDK if not initialized via settings
+                var dsn = GetEnv("SENTRY_DSN", null);
+                SentryUnity.Init(o =>
+                {
+                    if (!string.IsNullOrWhiteSpace(dsn)) o.Dsn = dsn;
+                    o.Release = release;
+                    o.Environment = environment;
+                });
+
                 SentrySdk.ConfigureScope(scope =>
                 {
                     scope.User = new User { Id = userId };
@@ -106,19 +116,8 @@ namespace CrashLab
         private static void OnLog(string condition, string stackTrace, LogType type)
         {
 #if DIAG_SENTRY
-            var level = BreadcrumbLevel.Info;
-            switch (type)
-            {
-                case LogType.Error:
-                case LogType.Exception:
-                case LogType.Assert:
-                    level = BreadcrumbLevel.Error; break;
-                case LogType.Warning:
-                    level = BreadcrumbLevel.Warning; break;
-                default:
-                    level = BreadcrumbLevel.Info; break;
-            }
-            SentrySdk.AddBreadcrumb(condition, category: "unity.log", level: level);
+            // Sentry Unity SDK already captures Unity logs as breadcrumbs.
+            // Avoid duplicating breadcrumbs here.
 #elif DIAG_CRASHLYTICS
             Crashlytics.Log(condition);
 #elif DIAG_UNITY
@@ -138,19 +137,6 @@ namespace CrashLab
             }
         }
 #endif
-
-        private static string LoadOrCreateUserId()
-        {
-            const string key = "crashlab_user_id";
-            if (PlayerPrefs.HasKey(key))
-            {
-                return PlayerPrefs.GetString(key);
-            }
-            var id = Guid.NewGuid().ToString("N");
-            PlayerPrefs.SetString(key, id);
-            PlayerPrefs.Save();
-            return id;
-        }
 
         private static string GetEnv(string key, string fallback)
             => Environment.GetEnvironmentVariable(key) ?? fallback;
