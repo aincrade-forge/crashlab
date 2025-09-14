@@ -19,7 +19,7 @@ namespace CrashLab
             {
                 if (!SentrySdk.IsEnabled)
                 {
-                    var dsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
+                    var dsn = Environment.GetEnvironmentVariable("SENTRY_DSN") ?? "https://744cbb7250eefb8cb1d9526d16e718ea@o4510018128904192.ingest.de.sentry.io/4510018130346064";
                     SentrySdk.Init(o =>
                     {
                         if (!string.IsNullOrWhiteSpace(dsn)) o.Dsn = dsn;
