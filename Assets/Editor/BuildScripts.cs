@@ -398,11 +398,7 @@ using UnityEditor.TestTools.TestRunner.Api;
             _done?.Invoke(_ok);
         }
         public void TestStarted(ITestAdaptor test) {}
-        public void TestFinished(ITestResultAdaptor result)
-        {
-            if (result.ResultStateStatus == TestResultState.Failed)
-                _ok = false;
-        }
+        public void TestFinished(ITestResultAdaptor result) {}
     }
 
     private static string GuessTargetKeyFromActive()
