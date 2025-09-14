@@ -34,6 +34,11 @@ Example CLI (adjust path/version):
   - Symbols uploaded for accurate stack traces.
 - Details and acceptance criteria: see `requirements.md`.
 
+## Telemetry & Metadata
+- The app sets common metadata at startup (see `Assets/Scripts/CrashLabTelemetry.cs`).
+- Provide env vars to stamp events: `RUN_ID`, `RELEASE_NAME`, `ENVIRONMENT`, `COMMIT_SHA`, `BUILD_NUMBER`, `DEV_MODE`, `USER_ID`, `CI`, `SERVER_NAME`.
+- Sentry/Crashlytics are configured under `DIAG_SENTRY` / `DIAG_CRASHLYTICS` defines; otherwise logs include a `CRASHLAB::META::` line.
+
 ## Contributing
 - Read `AGENTS.md` for repository conventions (structure, style, tests, PRs).
 - Use Conventional Commits (e.g., `feat(player): add dash`).
