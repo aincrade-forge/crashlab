@@ -1,0 +1,4 @@
+# Use Git LFS for large vendor tarballs (Firebase/EDM4U)
+Packages/vendor/*.tgz filter=lfs diff=lfs merge=lfs -text
+Packages/vendor/*.tar.gz filter=lfs diff=lfs merge=lfs -text
+
