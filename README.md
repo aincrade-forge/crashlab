@@ -49,6 +49,11 @@ Bundle IDs / Package Names
   - Link the project to UGS in Project Settings → Services, and set the desired environment.
   - The app sets `userId` and custom metadata (run_id, commit_sha, build_number, dev_mode, backend, platform, server_name).
 
+## Sentry Setup
+- Sentry Unity SDK is added via UPM using a Git URL (see `docs/SENTRY_SETUP.md`).
+- Provide `SENTRY_DSN` via environment or configure via Tools → Sentry.
+- Build Sentry flavors from the menu: CrashLab → Build → Android/iOS • Sentry.
+
 ## Crashlytics via Tarballs + Git LFS
 - We vendor Firebase tarballs in `Packages/vendor/` with versioned filenames and track them in Git LFS.
 - See `docs/CRASHLYTICS_SETUP.md` for steps to add/replace tarballs and credentials files.
