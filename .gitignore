@@ -50,6 +50,9 @@ desktop.ini
 *.zip
 *.tar
 *.tgz
+# Allow vendor tarballs committed via Git LFS
+!Packages/vendor/*.tgz
+!Packages/vendor/*.tar.gz
 
 # Keep Unity meta files tracked
 !*.meta
@@ -58,4 +61,3 @@ desktop.ini
 /.gradle/
 /gradle/
 *.gradle
-
