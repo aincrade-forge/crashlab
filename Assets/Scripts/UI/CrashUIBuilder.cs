@@ -48,8 +48,7 @@ namespace CrashLab.UI
         [SerializeField] private RectTransform _content;
         [SerializeField] private CrashUIButton _buttonPrefab;
 
-        [Header("Buttons")] 
-        [SerializeField] private List<ButtonEntry> _buttons = new List<ButtonEntry>();
+        // Buttons are generated at runtime on each Build() call; no cached serialized list
 
         private void Awake()
         {
@@ -74,7 +73,7 @@ namespace CrashLab.UI
                     Destroy(child.gameObject);
             }
 
-            foreach (var entry in _buttons)
+            foreach (var entry in BuildButtonList())
             {
                 var instance = Instantiate(_buttonPrefab, _content);
                 instance.Setup(entry.label, Resolve(entry.action));
@@ -115,39 +114,34 @@ namespace CrashLab.UI
             }
         }
 
-        // Optionally seed a useful default list when first added
-        private void Reset()
+        private IEnumerable<ButtonEntry> BuildButtonList()
         {
-            if (_buttons == null || _buttons.Count > 0) return;
-            _buttons = new List<ButtonEntry>
-            {
-                new ButtonEntry { label = "Managed: NullRef", action = ActionType.ManagedNullRef },
-                new ButtonEntry { label = "Managed: DivZero", action = ActionType.ManagedDivZero },
-                new ButtonEntry { label = "Managed: Unhandled", action = ActionType.ManagedUnhandled },
-                new ButtonEntry { label = "Managed: Unobserved Task", action = ActionType.ManagedUnobservedTask },
-                new ButtonEntry { label = "Managed: IndexOutOfRange", action = ActionType.ManagedIndexOutOfRange },
-                new ButtonEntry { label = "Managed: KeyNotFound", action = ActionType.ManagedKeyNotFound },
-                new ButtonEntry { label = "Managed: InvalidOperation (Modify During Enum)", action = ActionType.ManagedInvalidOperation_ModifiedDuringEnumeration },
-                new ButtonEntry { label = "Managed: AggregateException", action = ActionType.ManagedAggregate },
-                new ButtonEntry { label = "Native: AccessViolation", action = ActionType.NativeAccessViolation },
-                new ButtonEntry { label = "Native: Abort", action = ActionType.NativeAbort },
-                new ButtonEntry { label = "Native: FatalError", action = ActionType.NativeFatal },
-                new ButtonEntry { label = "Native: StackOverflow", action = ActionType.NativeStackOverflow },
-                new ButtonEntry { label = "Hang: Android ANR (10s)", action = ActionType.AndroidAnr10 },
-                new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 },
-                new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 },
-                new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap },
-                new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied },
-                new ButtonEntry { label = "Data: JSON Parse Error", action = ActionType.JsonParseError },
-                new ButtonEntry { label = "Lifecycle: Use After Dispose", action = ActionType.UseAfterDispose },
-                new ButtonEntry { label = "Thread: Background Unhandled", action = ActionType.BackgroundThreadUnhandled },
-                new ButtonEntry { label = "Thread: ThreadPool Unhandled", action = ActionType.ThreadPoolUnhandled },
-                new ButtonEntry { label = "Thread: Unity API From Worker", action = ActionType.UnityApiFromWorker },
+            yield return new ButtonEntry { label = "Managed: NullRef", action = ActionType.ManagedNullRef };
+            yield return new ButtonEntry { label = "Managed: DivZero", action = ActionType.ManagedDivZero };
+            yield return new ButtonEntry { label = "Managed: Unhandled", action = ActionType.ManagedUnhandled };
+            yield return new ButtonEntry { label = "Managed: Unobserved Task", action = ActionType.ManagedUnobservedTask };
+            yield return new ButtonEntry { label = "Managed: IndexOutOfRange", action = ActionType.ManagedIndexOutOfRange };
+            yield return new ButtonEntry { label = "Managed: KeyNotFound", action = ActionType.ManagedKeyNotFound };
+            yield return new ButtonEntry { label = "Managed: InvalidOperation (Modify During Enum)", action = ActionType.ManagedInvalidOperation_ModifiedDuringEnumeration };
+            yield return new ButtonEntry { label = "Managed: AggregateException", action = ActionType.ManagedAggregate };
+            yield return new ButtonEntry { label = "Native: AccessViolation", action = ActionType.NativeAccessViolation };
+            yield return new ButtonEntry { label = "Native: Abort", action = ActionType.NativeAbort };
+            yield return new ButtonEntry { label = "Native: FatalError", action = ActionType.NativeFatal };
+            yield return new ButtonEntry { label = "Native: StackOverflow", action = ActionType.NativeStackOverflow };
+            yield return new ButtonEntry { label = "Hang: Android ANR (10s)", action = ActionType.AndroidAnr10 };
+            yield return new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 };
+            yield return new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 };
+            yield return new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap };
+            yield return new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied };
+            yield return new ButtonEntry { label = "Data: JSON Parse Error", action = ActionType.JsonParseError };
+            yield return new ButtonEntry { label = "Lifecycle: Use After Dispose", action = ActionType.UseAfterDispose };
+            yield return new ButtonEntry { label = "Thread: Background Unhandled", action = ActionType.BackgroundThreadUnhandled };
+            yield return new ButtonEntry { label = "Thread: ThreadPool Unhandled", action = ActionType.ThreadPoolUnhandled };
+            yield return new ButtonEntry { label = "Thread: Unity API From Worker", action = ActionType.UnityApiFromWorker };
 #if DIAG_SENTRY
-                new ButtonEntry { label = "Sentry: Self-test event", action = ActionType.SentrySelfTest },
+            yield return new ButtonEntry { label = "Sentry: Self-test event", action = ActionType.SentrySelfTest };
 #endif
-                new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash },
-            };
+            yield return new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash };
         }
     }
 }

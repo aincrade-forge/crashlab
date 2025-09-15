@@ -46,7 +46,7 @@ namespace CrashLab
 
                 SentrySdk.ConfigureScope(scope =>
                 {
-                    scope.User = new User { Id = userId };
+                    scope.User = new SentryUser { Id = userId };
                     foreach (var kv in meta)
                     {
                         scope.SetTag(kv.Key, kv.Value);
