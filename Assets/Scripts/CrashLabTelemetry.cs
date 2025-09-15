@@ -57,6 +57,19 @@ namespace CrashLab
             _service = CreateService();
             _service.Initialize(userId, Meta, release, environment);
 
+            // If we're not using Unity Cloud Diagnostics, disable its exception capture to avoid
+            // Unity's "Uploading Crash Report" behavior and duplicate reports.
+#if !DIAG_UNITY
+            try
+            {
+                UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions = false;
+            }
+            catch (Exception)
+            {
+                // Ignore if not supported on this platform/Unity version
+            }
+#endif
+
             Application.logMessageReceived += OnLog;
             Debug.Log($"CRASHLAB::INIT::run_id={runId}");
         }
