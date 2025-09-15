@@ -6,8 +6,8 @@ using UnityEngine;
 using Sentry;
 using Sentry.Unity;
 using Sentry.Protocol;
-#endif
 
+#endif
 namespace CrashLab
 {
 #if DIAG_SENTRY
@@ -20,28 +20,34 @@ namespace CrashLab
                 if (!SentrySdk.IsEnabled)
                 {
                     var dsn = "https://744cbb7250eefb8cb1d9526d16e718ea@o4510018128904192.ingest.de.sentry.io/4510018130346064";
+                    // Initialize using the Options asset as baseline and force-enable it so
+                    // native backends are active at runtime as well.
                     SentryUnity.Init((SentryUnityOptions o) =>
                     {
-                        // Hardcoded minimal setup (no env required)
-                        o.Dsn = dsn;
-                        o.Release = string.IsNullOrEmpty(release) ? Application.version : release;
-                        o.Environment = string.IsNullOrEmpty(environment) ? "prod" : environment;
+                        o.Enabled = true;
+
+                        if (string.IsNullOrWhiteSpace(o.Dsn))
+                            o.Dsn = dsn;
+
+                        if (string.IsNullOrEmpty(o.Release))
+                            o.Release = string.IsNullOrEmpty(release) ? Application.version : release;
+                        if (string.IsNullOrEmpty(o.Environment))
+                            o.Environment = string.IsNullOrEmpty(environment) ? "prod" : environment;
+
                         o.AutoSessionTracking = true;
                         o.CaptureInEditor = true;
                         o.AttachStacktrace = true;
                         o.Debug = true; // keep on for visibility
-                        try { o.CacheDirectoryPath = Application.persistentDataPath + "/sentry-cache"; } catch { }
-
-                        // Useful hardcoded options (no env required)
                         o.SendDefaultPii = false;
                         o.MaxBreadcrumbs = 200;
                         o.TracesSampleRate = 0.2; // adjust if you want performance tracing
+
+                        // Ensure native backends are toggled on; their actual inclusion is decided at build-time.
                         o.AndroidNativeSupportEnabled = true;
                         o.IosNativeSupportEnabled = true;
                         o.MacosNativeSupportEnabled = true;
                         o.WindowsNativeSupportEnabled = true;
                         o.Il2CppLineNumberSupportEnabled = true;
-
                     });
                     Debug.Log("CRASHLAB::SENTRY::initialized");
                 }

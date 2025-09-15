@@ -174,6 +174,9 @@ using UnityEditor.TestTools.TestRunner.Api;
         {
             LogError($"Failed to update Unity Connect CrashReporting settings: {e.Message}");
         }
+
+        // SentryOptions.asset is now managed by a PreBuild hook (SentryPreBuildHook).
+        // No action needed here to avoid duplication.
     }
 
     private static string AddDefine(string defines, string add)
@@ -470,4 +473,5 @@ using UnityEditor.TestTools.TestRunner.Api;
         var newText = text.Substring(0, idx) + newBlock + text.Substring(blockEnd);
         File.WriteAllText(path, newText);
     }
+
 }
