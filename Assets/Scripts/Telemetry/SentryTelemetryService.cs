@@ -217,7 +217,31 @@ namespace CrashLab
 
         public void OnLog(string condition, string stackTrace, LogType type)
         {
-            // Sentry Unity SDK already captures Unity logs as breadcrumbs by default.
+            try
+            {
+                if (type == LogType.Exception)
+                {
+                    var ex = new Exception(condition);
+                    if (!string.IsNullOrEmpty(stackTrace))
+                    {
+                        try { ex.Data["unity_stack"] = stackTrace; } catch { }
+                    }
+                    SentrySdk.CaptureException(ex);
+                }
+                else
+                {
+                    var level = type switch
+                    {
+                        LogType.Error => BreadcrumbLevel.Error,
+                        LogType.Assert => BreadcrumbLevel.Error,
+                        LogType.Warning => BreadcrumbLevel.Warning,
+                        LogType.Log => BreadcrumbLevel.Info,
+                        _ => BreadcrumbLevel.Info
+                    };
+                    SentrySdk.AddBreadcrumb(condition, category: "unity.log", level: level);
+                }
+            }
+            catch { /* ignore */ }
         }
     }
 #endif
