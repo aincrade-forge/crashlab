@@ -6,6 +6,7 @@ using UnityEngine;
 #if DIAG_SENTRY
 using Sentry;
 using Sentry.Unity;
+using Sentry.Protocol;
 #endif
 
 namespace CrashLab
@@ -19,7 +20,7 @@ namespace CrashLab
             {
                 if (!SentrySdk.IsEnabled)
                 {
-                    var dsn = Environment.GetEnvironmentVariable("SENTRY_DSN") ?? "https://744cbb7250eefb8cb1d9526d16e718ea@o4510018128904192.ingest.de.sentry.io/4510018130346064";
+                    var dsn = "https://744cbb7250eefb8cb1d9526d16e718ea@o4510018128904192.ingest.de.sentry.io/4510018130346064";
                     SentrySdk.Init(o =>
                     {
                         if (!string.IsNullOrWhiteSpace(dsn)) o.Dsn = dsn;
@@ -43,16 +44,32 @@ namespace CrashLab
                     Debug.Log("CRASHLAB::SENTRY::already_initialized (using existing settings)");
                 }
 
-                // SentrySdk.ConfigureScope(scope =>
-                // {
-                //     // scope.User = new User { Id = userId };
-                //     // foreach (var kv in meta)
-                //     // {
-                //     //     scope.SetTag(kv.Key, kv.Value);
-                //     // }
-                // });
+                SentrySdk.ConfigureScope(scope =>
+                {
+                    scope.User = new User { Id = userId };
+                    foreach (var kv in meta)
+                    {
+                        scope.SetTag(kv.Key, kv.Value);
+                    }
+                });
 
                 SentrySdk.AddBreadcrumb("CrashLab init", category: "crashlab", level: BreadcrumbLevel.Info);
+
+                var selftest = Environment.GetEnvironmentVariable("SENTRY_SELFTEST");
+                if (!string.IsNullOrEmpty(selftest) && selftest.Equals("true", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        meta.TryGetValue("run_id", out var rid);
+                        SentrySdk.CaptureMessage($"CrashLab Sentry selftest run_id={rid ?? "unknown"}");
+                        SentrySdk.Flush(TimeSpan.FromSeconds(2));
+                        Debug.Log("CRASHLAB::SENTRY::selftest event sent");
+                    }
+                    catch (Exception se)
+                    {
+                        Debug.LogWarning($"CRASHLAB::SENTRY::selftest error: {se.Message}");
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -182,7 +199,7 @@ namespace CrashLab
 
         private static void TrySetBool(SentryOptions o, string propName, bool value)
         {
-            var p = typeof(SentryUnityOptions).GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+            var p = typeof(SentryOptions).GetProperty(propName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
             if (p != null && p.CanWrite && p.PropertyType == typeof(bool))
             {
                 try { p.SetValue(o, value); } catch { }

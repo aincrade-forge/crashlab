@@ -9,7 +9,7 @@ namespace CrashLab
     public static class CrashActions
     {
         private static readonly List<byte[]> _oom = new List<byte[]>();
-        private static readonly object _lockObj = new object();
+        private static readonly int _divZero = 0;
 
         public static void ManagedNullRef()
         {
@@ -21,7 +21,7 @@ namespace CrashLab
         public static void ManagedDivZero()
         {
             Debug.Log("CRASHLAB::managed_div_zero::START");
-            var x = 1 / int.Parse("0");
+            var x = 1 / _divZero;
             Debug.Log(x);
         }
 
@@ -227,6 +227,31 @@ namespace CrashLab
             var b = ms.ReadByte(); // ObjectDisposedException
             Debug.Log(b);
         }
+
+#if DIAG_SENTRY
+        public static void SentrySelfTest()
+        {
+            Debug.Log("CRASHLAB::sentry_selftest::START");
+            try
+            {
+                Sentry.SentrySdk.CaptureMessage("CrashLab Sentry self-test: test message");
+                try
+                {
+                    throw new InvalidOperationException("CrashLab Sentry self-test: handled exception");
+                }
+                catch (Exception ex)
+                {
+                    Sentry.SentrySdk.CaptureException(ex);
+                }
+                Sentry.SentrySdk.Flush(TimeSpan.FromSeconds(2));
+                Debug.Log("CRASHLAB::sentry_selftest::SENT");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"CRASHLAB::sentry_selftest::ERROR::{e.GetType().Name}:{e.Message}");
+            }
+        }
+#endif
 
         public static void ScheduleStartupCrash(string key = "crashlab_startup_action")
         {
