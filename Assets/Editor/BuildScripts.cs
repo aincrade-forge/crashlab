@@ -161,6 +161,19 @@ using UnityEditor.TestTools.TestRunner.Api;
         defines = AddDefine(defines, add);
         PlayerSettings.SetScriptingDefineSymbols(named, defines);
         Log($"Flavor set: {flavor} → define {add}");
+
+        // Toggle Unity Cloud Diagnostics Crash Reporting based on flavor
+        // Enabled only for DIAG_UNITY builds; disabled for Sentry/Crashlytics flavors to avoid duplicates
+        var enableCloudCrash = add == "DIAG_UNITY";
+        try
+        {
+            SetUnityCloudCrashReporting(enableCloudCrash);
+            Log($"Unity Cloud Diagnostics Crash Reporting: {(enableCloudCrash ? "enabled" : "disabled")} for flavor={flavor}");
+        }
+        catch (Exception e)
+        {
+            LogError($"Failed to update Unity Connect CrashReporting settings: {e.Message}");
+        }
     }
 
     private static string AddDefine(string defines, string add)
@@ -430,4 +443,31 @@ using UnityEditor.TestTools.TestRunner.Api;
 
     private static void Log(string msg) => Console.WriteLine($"[BuildScripts] {msg}");
     private static void LogError(string msg) => Console.Error.WriteLine($"[BuildScripts:ERROR] {msg}");
+
+    // --- Unity Cloud Diagnostics CrashReporting toggle ---
+    private static void SetUnityCloudCrashReporting(bool enabled)
+    {
+        var path = Path.Combine("ProjectSettings", "UnityConnectSettings.asset");
+        if (!File.Exists(path)) throw new FileNotFoundException(path);
+        var text = File.ReadAllText(path);
+
+        // Replace the specific CrashReportingSettings m_Enabled line
+        // We search for the marker block then replace the next m_Enabled: value within that block
+        const string blockStart = "CrashReportingSettings:";
+        var idx = text.IndexOf(blockStart, StringComparison.Ordinal);
+        if (idx < 0) throw new Exception("CrashReportingSettings block not found");
+        var blockEnd = text.IndexOf("UnityPurchasingSettings:", idx, StringComparison.Ordinal);
+        if (blockEnd < 0) blockEnd = text.Length;
+
+        var block = text.Substring(idx, blockEnd - idx);
+        var newBlock = System.Text.RegularExpressions.Regex.Replace(
+            block,
+            @"(^\s*m_Enabled:\s*)([01])\s*$",
+            m => m.Groups[1].Value + (enabled ? "1" : "0"),
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        if (block == newBlock) return; // no change
+        var newText = text.Substring(0, idx) + newBlock + text.Substring(blockEnd);
+        File.WriteAllText(path, newText);
+    }
 }
