@@ -57,17 +57,14 @@ namespace CrashLab
             _service = CreateService();
             _service.Initialize(userId, Meta, release, environment);
 
-            // If we're not using Unity Cloud Diagnostics, disable its exception capture to avoid
-            // Unity's "Uploading Crash Report" behavior and duplicate reports.
-#if !DIAG_UNITY
-            try
-            {
-                UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions = false;
-            }
-            catch (Exception)
-            {
-                // Ignore if not supported on this platform/Unity version
-            }
+            // Control Unity's built-in CrashReportHandler capture via code.
+            // By default we keep it ON for DIAG_UNITY builds, and OFF otherwise to avoid duplicates.
+            // You can override in non-Unity flavors by setting env UNITY_CAPTURE_EXCEPTIONS=true.
+#if DIAG_UNITY
+            try { UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions = true; } catch { }
+#else
+            var unityCapture = GetEnv("UNITY_CAPTURE_EXCEPTIONS", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
+            try { UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions = unityCapture; } catch { }
 #endif
 
             Application.logMessageReceived += OnLog;
