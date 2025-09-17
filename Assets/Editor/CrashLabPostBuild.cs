@@ -14,6 +14,7 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
     {
         try
         {
+            var hookSw = Stopwatch.StartNew();
             var meta = ReadBuildMeta();
             if (meta == null)
             {
@@ -40,6 +41,8 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
             {
                 RunCrashlyticsUpload(target, meta.Output);
             }
+            hookSw.Stop();
+            UnityEngine.Debug.Log($"[CrashLabPostBuild] Hooks finished in {Format(hookSw.Elapsed)}");
         }
         catch (Exception e)
         {
@@ -55,7 +58,11 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
             var sym = GuessAndroidSymbolsDir();
             if (File.Exists(gsp) && sym != null)
             {
+                var sw = Stopwatch.StartNew();
+                UnityEngine.Debug.Log($"[Crashlytics] Uploading Android symbols from '{sym}'...");
                 ShellBash($"ANDROID=true GOOGLE_SERVICES_JSON='{gsp}' ANDROID_SYMBOLS_DIR='{sym}' ./scripts/crashlytics_upload_symbols.sh");
+                sw.Stop();
+                UnityEngine.Debug.Log($"[Crashlytics] Android symbol upload completed in {Format(sw.Elapsed)}");
             }
             else
             {
@@ -81,7 +88,11 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 : null;
             if (dsyms != null && SentryEnvPresent())
             {
+                var sw = Stopwatch.StartNew();
+                UnityEngine.Debug.Log($"[Sentry] Uploading macOS symbols from '{dsyms}'...");
                 ShellBash($"PLATFORM=macos DSYM_DIR='{dsyms}' ./scripts/sentry_upload_symbols.sh");
+                sw.Stop();
+                UnityEngine.Debug.Log($"[Sentry] macOS symbol upload completed in {Format(sw.Elapsed)}");
             }
             else
             {
@@ -96,7 +107,11 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
             var lib = GuessAndroidSymbolsDir();
             if (lib != null && SentryEnvPresent())
             {
+                var sw = Stopwatch.StartNew();
+                UnityEngine.Debug.Log($"[Sentry] Uploading Android symbols from '{lib}'...");
                 ShellBash($"PLATFORM=android ANDROID_LIB_DIR='{lib}' ./scripts/sentry_upload_symbols.sh");
+                sw.Stop();
+                UnityEngine.Debug.Log($"[Sentry] Android symbol upload completed in {Format(sw.Elapsed)}");
             }
             else
             {
@@ -145,6 +160,7 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         };
         using var p = Process.Start(psi);
         if (p == null) throw new Exception("Failed to start bash");
+        UnityEngine.Debug.Log("[CrashLabPostBuild] exec: " + command);
         var stdout = p.StandardOutput.ReadToEnd();
         var stderr = p.StandardError.ReadToEnd();
         p.WaitForExit();
@@ -157,6 +173,11 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
 
     private static string GetEnv(string key, string def)
         => Environment.GetEnvironmentVariable(key) ?? def;
+
+    private static string Format(TimeSpan ts)
+        => ts.TotalHours >= 1 ? $"{(int)ts.TotalHours}h {ts.Minutes}m {ts.Seconds}s"
+           : ts.TotalMinutes >= 1 ? $"{(int)ts.TotalMinutes}m {ts.Seconds}s"
+           : $"{ts.Seconds}s";
 
     private class BuildMeta
     {

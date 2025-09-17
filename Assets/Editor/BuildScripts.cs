@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.TestTools.TestRunner.Api;
+using System.Diagnostics;
 
     public static class BuildScripts
     {
@@ -35,27 +36,49 @@ using UnityEditor.TestTools.TestRunner.Api;
         {
             try
             {
+                var matrixSw = Stopwatch.StartNew();
                 var targets = (GetEnv("TARGETS", "windows-x64,macos-arm64,android-arm64,ios-arm64")
                     .Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToArray();
                 var dev = GetEnv("DEV_MODE", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
 
+                // Plan tasks
+                var tasks = new System.Collections.Generic.List<(string target, string flavor)>();
                 foreach (var t in targets)
+                    foreach (var f in FlavorsForTarget(t))
+                        tasks.Add((t, f));
+
+                var total = tasks.Count;
+                Log($"=== Matrix plan: {total} builds ===");
+                for (int i = 0; i < tasks.Count; i++)
                 {
-                    foreach (var flavor in FlavorsForTarget(t))
+                    var (t, f) = tasks[i];
+                    Log($"[{i + 1}/{total}] Start {t}/{f} (dev={dev})");
+                    var sw = Stopwatch.StartNew();
+                    try
                     {
-                        Log($"=== Building {t} / {flavor} (dev={dev}) ===");
-                        try
+                        var path = BuildOnce(t, f, dev);
+                        sw.Stop();
+                        // ETA calculation
+                        var avg = sw.Elapsed; // default for first item
+                        if (i > 0)
                         {
-                            var path = BuildOnce(t, flavor, dev);
-                            Log($"OK: {t}/{flavor} → {path}");
+                            var done = i; // already finished before this one
+                            var elapsedSoFar = matrixSw.Elapsed;
+                            avg = TimeSpan.FromMilliseconds(elapsedSoFar.TotalMilliseconds / (done + 1));
                         }
-                        catch (Exception ex)
-                        {
-                            LogError($"FAIL: {t}/{flavor}: {ex.Message}");
-                            throw; // stop matrix on first failure
-                        }
+                        var remaining = total - (i + 1);
+                        var eta = TimeSpan.FromMilliseconds(avg.TotalMilliseconds * remaining);
+                        Log($"[{i + 1}/{total}] Done {t}/{f} → {path} (took {Format(sw.Elapsed)}, ETA {Format(eta)})");
+                        Log("    • Uploading symbols runs post-build; watch [CrashLabPostBuild] logs.");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError($"[{i + 1}/{total}] FAIL {t}/{f}: {ex.Message}");
+                        throw; // stop matrix on first failure
                     }
                 }
+                matrixSw.Stop();
+                Log($"=== Matrix completed in {Format(matrixSw.Elapsed)} ===");
                 EditorApplication.Exit(0);
             }
             catch (Exception ex)
@@ -100,11 +123,14 @@ using UnityEditor.TestTools.TestRunner.Api;
                 options = development ? BuildOptions.Development : BuildOptions.None
             };
 
+            var sw = Stopwatch.StartNew();
             var report = BuildPipeline.BuildPlayer(options);
             if (report.summary.result != BuildResult.Succeeded)
             {
                 throw new Exception($"Build failed: {report.summary.result} - {report.summary.totalErrors} errors");
             }
+            sw.Stop();
+            Log($"Build finished for {target}/{flavor} (elapsed {Format(sw.Elapsed)})");
 
             return location;
         }
@@ -446,6 +472,15 @@ using UnityEditor.TestTools.TestRunner.Api;
 
     private static void Log(string msg) => Console.WriteLine($"[BuildScripts] {msg}");
     private static void LogError(string msg) => Console.Error.WriteLine($"[BuildScripts:ERROR] {msg}");
+
+    private static string Format(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+            return $"{(int)ts.TotalHours}h {ts.Minutes}m {ts.Seconds}s";
+        if (ts.TotalMinutes >= 1)
+            return $"{(int)ts.TotalMinutes}m {ts.Seconds}s";
+        return $"{ts.Seconds}s";
+    }
 
     // --- Unity Cloud Diagnostics CrashReporting toggle ---
     private static void SetUnityCloudCrashReporting(bool enabled)
