@@ -66,6 +66,11 @@ namespace CrashLab
             var unityCapture = GetEnv("UNITY_CAPTURE_EXCEPTIONS", "false").Equals("true", StringComparison.OrdinalIgnoreCase);
             try { UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions = unityCapture; } catch { }
 #endif
+            try
+            {
+                Debug.Log($"CRASHLAB::UNITY_CRASH_HANDLER::enabled={UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions}");
+            }
+            catch { }
 
             Application.logMessageReceived += OnLog;
             Debug.Log($"CRASHLAB::INIT::run_id={runId}");
