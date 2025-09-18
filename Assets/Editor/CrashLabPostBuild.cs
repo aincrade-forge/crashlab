@@ -86,11 +86,12 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
             var dsyms = Directory.Exists(appDir)
                 ? Directory.GetDirectories(appDir, "*.dSYM", SearchOption.AllDirectories).FirstOrDefault()
                 : null;
-            if (dsyms != null && SentryEnvPresent())
+            if (dsyms != null && TryResolveSentryCreds(out var org, out var project, out var token, out var source))
             {
                 var sw = Stopwatch.StartNew();
-                UnityEngine.Debug.Log($"[Sentry] Uploading macOS symbols from '{dsyms}'...");
-                ShellBash($"PLATFORM=macos DSYM_DIR='{dsyms}' ./scripts/sentry_upload_symbols.sh");
+                var env = $"SENTRY_ORG='{EscapeBash(org)}' SENTRY_PROJECT='{EscapeBash(project)}' SENTRY_AUTH_TOKEN='{EscapeBash(token)}' ";
+                UnityEngine.Debug.Log($"[Sentry] Uploading macOS symbols from '{dsyms}' (creds: {source})...");
+                ShellBash(env + $"PLATFORM=macos DSYM_DIR='{dsyms}' ./scripts/sentry_upload_symbols.sh");
                 sw.Stop();
                 UnityEngine.Debug.Log($"[Sentry] macOS symbol upload completed in {Format(sw.Elapsed)}");
             }
@@ -99,17 +100,18 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 if (dsyms == null)
                     UnityEngine.Debug.LogWarning("[Sentry] No dSYM found near macOS app. Skipping.");
                 else
-                    UnityEngine.Debug.LogWarning("[Sentry] Missing Sentry env (SENTRY_ORG/PROJECT/AUTH_TOKEN). Skipping.");
+                    UnityEngine.Debug.LogWarning("[Sentry] Missing Sentry credentials (org/project/auth). Configure env vars or SentryCliOptions.asset. Skipping.");
             }
         }
         else if (target == BuildTarget.Android)
         {
             var lib = GuessAndroidSymbolsDir();
-            if (lib != null && SentryEnvPresent())
+            if (lib != null && TryResolveSentryCreds(out var org, out var project, out var token, out var source))
             {
                 var sw = Stopwatch.StartNew();
-                UnityEngine.Debug.Log($"[Sentry] Uploading Android symbols from '{lib}'...");
-                ShellBash($"PLATFORM=android ANDROID_LIB_DIR='{lib}' ./scripts/sentry_upload_symbols.sh");
+                var env = $"SENTRY_ORG='{EscapeBash(org)}' SENTRY_PROJECT='{EscapeBash(project)}' SENTRY_AUTH_TOKEN='{EscapeBash(token)}' ";
+                UnityEngine.Debug.Log($"[Sentry] Uploading Android symbols from '{lib}' (creds: {source})...");
+                ShellBash(env + $"PLATFORM=android ANDROID_LIB_DIR='{lib}' ./scripts/sentry_upload_symbols.sh");
                 sw.Stop();
                 UnityEngine.Debug.Log($"[Sentry] Android symbol upload completed in {Format(sw.Elapsed)}");
             }
@@ -118,7 +120,7 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 if (lib == null)
                     UnityEngine.Debug.LogWarning("[Sentry] Could not guess Android symbols dir. Skipping.");
                 else
-                    UnityEngine.Debug.LogWarning("[Sentry] Missing Sentry env (SENTRY_ORG/PROJECT/AUTH_TOKEN). Skipping.");
+                    UnityEngine.Debug.LogWarning("[Sentry] Missing Sentry credentials (org/project/auth). Configure env vars or SentryCliOptions.asset. Skipping.");
             }
         }
         else if (target == BuildTarget.iOS)
@@ -131,10 +133,42 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         }
     }
 
-    private static bool SentryEnvPresent()
-        => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_ORG"))
-           && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_PROJECT"))
-           && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_AUTH_TOKEN"));
+    private static bool TryResolveSentryCreds(out string org, out string project, out string token, out string source)
+    {
+        org = Environment.GetEnvironmentVariable("SENTRY_ORG");
+        project = Environment.GetEnvironmentVariable("SENTRY_PROJECT");
+        token = Environment.GetEnvironmentVariable("SENTRY_AUTH_TOKEN");
+        if (!string.IsNullOrEmpty(org) && !string.IsNullOrEmpty(project) && !string.IsNullOrEmpty(token))
+        {
+            source = "env";
+            return true;
+        }
+
+        try
+        {
+            // Fall back to SentryCliOptions.asset (Unity Sentry package CLI config)
+            var assetPath = Path.Combine("Assets", "Plugins", "Sentry", "SentryCliOptions.asset");
+            var obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+            if (obj != null)
+            {
+                var so = new SerializedObject(obj);
+                string Get(string name)
+                    => so.FindProperty($"<{name}>k__BackingField")?.stringValue;
+                var o = Get("Organization");
+                var p = Get("Project");
+                var t = Get("Auth");
+                if (!string.IsNullOrEmpty(o) && !string.IsNullOrEmpty(p) && !string.IsNullOrEmpty(t))
+                {
+                    org = o; project = p; token = t; source = "SentryCliOptions.asset";
+                    return true;
+                }
+            }
+        }
+        catch { /* ignore */ }
+
+        source = null;
+        return false;
+    }
 
     private static string GuessAndroidSymbolsDir()
     {
@@ -178,6 +212,8 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         => ts.TotalHours >= 1 ? $"{(int)ts.TotalHours}h {ts.Minutes}m {ts.Seconds}s"
            : ts.TotalMinutes >= 1 ? $"{(int)ts.TotalMinutes}m {ts.Seconds}s"
            : $"{ts.Seconds}s";
+
+    private static string EscapeBash(string s) => string.IsNullOrEmpty(s) ? s : s.Replace("'", "'\"'\"'");
 
     private class BuildMeta
     {
