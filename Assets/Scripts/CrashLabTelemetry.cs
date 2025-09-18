@@ -20,7 +20,7 @@ namespace CrashLab
             var runId = GetEnv("RUN_ID", "demo-run");
             var release = GetEnv("RELEASE_NAME", Application.version);
             var environment = GetEnv("ENVIRONMENT", "dev");
-            var commitSha = GetEnv("COMMIT_SHA", "demo-sha");
+            var commitSha = GetEnv("COMMIT_SHA", null);
             var buildNumber = GetEnv("BUILD_NUMBER", "100");
             var devMode = GetEnv("DEV_MODE", "true");
             var ci = GetEnv("CI", "false");
@@ -45,7 +45,23 @@ namespace CrashLab
             Meta["environment"] = environment;
             Meta["backend"] = backend;
             Meta["platform"] = platform;
-            Meta["commit_sha"] = commitSha;
+            // Optionally override commit sha and build info from embedded build info asset
+            try
+            {
+                var info = Resources.Load<CrashLabBuildInfo>("CrashLabBuildInfo");
+                if (info != null)
+                {
+                    if (string.IsNullOrEmpty(commitSha)) commitSha = info.commitSha;
+                    if (!string.IsNullOrEmpty(info.buildNumber)) buildNumber = info.buildNumber;
+                    Meta["build_ts"] = string.IsNullOrEmpty(info.buildTimestampUtc)
+                        ? DateTime.UtcNow.ToString("o")
+                        : info.buildTimestampUtc;
+                    if (!string.IsNullOrEmpty(info.branch)) Meta["branch"] = info.branch;
+                }
+            }
+            catch { /* ignore if resources not present */ }
+
+            Meta["commit_sha"] = string.IsNullOrEmpty(commitSha) ? "unknown" : commitSha;
             Meta["build_number"] = buildNumber;
             Meta["dev_mode"] = devMode;
             Meta["ci"] = ci;

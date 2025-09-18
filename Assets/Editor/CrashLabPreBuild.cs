@@ -33,6 +33,7 @@ namespace CrashLab.Editor
 
                 UpdateSentryOptionsAsset(isSentry);
                 SetUnityCloudCrashReporting(isUnityDiag);
+                UpdateBuildInfoAsset();
 
                 Debug.Log($"[CrashLab] PreBuild: sentry={isSentry} unity_diag={isUnityDiag} target={report.summary.platform}");
             }
@@ -84,6 +85,74 @@ namespace CrashLab.Editor
             }
         }
 
+        private static void UpdateBuildInfoAsset()
+        {
+            // Load or create Resources/CrashLabBuildInfo.asset and set commit sha and timestamp
+            var resDir = Path.Combine("Assets", "Resources");
+            if (!Directory.Exists(resDir)) Directory.CreateDirectory(resDir);
+
+            var assetPath = Path.Combine(resDir, "CrashLabBuildInfo.asset");
+            var obj = AssetDatabase.LoadAssetAtPath<CrashLab.CrashLabBuildInfo>(assetPath);
+            if (obj == null)
+            {
+                obj = ScriptableObject.CreateInstance<CrashLab.CrashLabBuildInfo>();
+                AssetDatabase.CreateAsset(obj, assetPath);
+            }
+
+            var commit = GetGitCommitShort() ?? Environment.GetEnvironmentVariable("COMMIT_SHA") ?? string.Empty;
+            var branch = GetGitBranch() ?? string.Empty;
+            var buildNumber = Environment.GetEnvironmentVariable("BUILD_NUMBER") ?? string.Empty;
+            var ts = DateTime.UtcNow.ToString("o");
+
+            obj.commitSha = commit;
+            obj.branch = branch;
+            obj.buildNumber = buildNumber;
+            obj.buildTimestampUtc = ts;
+            EditorUtility.SetDirty(obj);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static string GetGitCommitShort()
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = "-lc 'git rev-parse --short=9 HEAD'",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using var p = System.Diagnostics.Process.Start(psi);
+                if (p == null) return null;
+                var outp = p.StandardOutput.ReadToEnd().Trim();
+                p.WaitForExit();
+                return string.IsNullOrEmpty(outp) ? null : outp;
+            }
+            catch { return null; }
+        }
+
+        private static string GetGitBranch()
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = "-lc 'git rev-parse --abbrev-ref HEAD'",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using var p = System.Diagnostics.Process.Start(psi);
+                if (p == null) return null;
+                var outp = p.StandardOutput.ReadToEnd().Trim();
+                p.WaitForExit();
+                return string.IsNullOrEmpty(outp) ? null : outp;
+            }
+            catch { return null; }
+        }
         // Toggle Unity Cloud Diagnostics Crash Reporting (Project Settings).
         private static void SetUnityCloudCrashReporting(bool enabled)
         {
@@ -112,4 +181,3 @@ namespace CrashLab.Editor
         }
     }
 }
-

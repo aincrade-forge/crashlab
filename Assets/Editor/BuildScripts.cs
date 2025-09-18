@@ -349,11 +349,13 @@ using System.Diagnostics;
         {
             var dir = Path.Combine("Library", "CrashLabBuild");
             Directory.CreateDirectory(dir);
+            var commit = GetGitCommitShort() ?? Environment.GetEnvironmentVariable("COMMIT_SHA") ?? "";
             var json = "{" +
                        $"\"target\":\"{target}\"," +
                        $"\"flavor\":\"{flavor}\"," +
                        $"\"development\":{(development ? "true" : "false")}," +
-                       $"\"output\":\"{EscapeJson(output)}\"" +
+                       $"\"output\":\"{EscapeJson(output)}\"," +
+                       $"\"commit_sha\":\"{EscapeJson(commit)}\"" +
                        "}";
             File.WriteAllText(Path.Combine(dir, "build.json"), json);
             // Also write into artifact directory for convenience
@@ -472,6 +474,27 @@ using System.Diagnostics;
 
     private static void Log(string msg) => Console.WriteLine($"[BuildScripts] {msg}");
     private static void LogError(string msg) => Console.Error.WriteLine($"[BuildScripts:ERROR] {msg}");
+
+    private static string GetGitCommitShort()
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = "-lc 'git rev-parse --short=9 HEAD'",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p == null) return null;
+            var outp = p.StandardOutput.ReadToEnd().Trim();
+            p.WaitForExit();
+            return string.IsNullOrEmpty(outp) ? null : outp;
+        }
+        catch { return null; }
+    }
 
     private static string Format(TimeSpan ts)
     {
