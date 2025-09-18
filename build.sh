@@ -50,6 +50,33 @@ if [[ "$MATRIX" == "true" ]]; then
         -logFile "$LOG_PATH" \
         -executeMethod BuildScripts.BuildRelease || exit 1
       echo "Built $t / $f → see $LOG_PATH"
+      # Summarize symbol upload from post-build logs
+      if grep -q "\[Sentry\]" "$LOG_PATH" || grep -q "\[Crashlytics\]" "$LOG_PATH"; then
+        # Sentry summary
+        if grep -q "\[Sentry\]" "$LOG_PATH"; then
+          SENT_DONE=$(awk '/\[Sentry\].*symbol upload completed in/{last=$0} END{print last}' "$LOG_PATH" || true)
+          if [[ -n "$SENT_DONE" ]]; then
+            echo "  Symbols (Sentry): ${SENT_DONE#*\[Sentry\] }"
+          else
+            SENT_SKIP=$(grep -m1 -E "\[Sentry\] (No dSYM|Missing Sentry env|Could not guess Android symbols dir)" "$LOG_PATH" || true)
+            if [[ -n "$SENT_SKIP" ]]; then
+              echo "  Symbols (Sentry): ${SENT_SKIP#*\[Sentry\] }"
+            fi
+          fi
+        fi
+        # Crashlytics summary
+        if grep -q "\[Crashlytics\]" "$LOG_PATH"; then
+          CL_DONE=$(awk '/\[Crashlytics\].*symbol upload completed in/{last=$0} END{print last}' "$LOG_PATH" || true)
+          if [[ -n "$CL_DONE" ]]; then
+            echo "  Symbols (Crashlytics): ${CL_DONE#*\[Crashlytics\] }"
+          else
+            CL_SKIP=$(grep -m1 -E "\[Crashlytics\] Skipping upload\.|\[Crashlytics\] iOS dSYMs are generated on archive" "$LOG_PATH" || true)
+            if [[ -n "$CL_SKIP" ]]; then
+              echo "  Symbols (Crashlytics): ${CL_SKIP#*\[Crashlytics\] }"
+            fi
+          fi
+        fi
+      fi
     done
   done
   echo "Build matrix finished. Logs under Artifacts/<target>-<flavor>/build.log"
@@ -70,4 +97,29 @@ else
     -logFile "$LOG_PATH" \
     -executeMethod BuildScripts.BuildRelease
   echo "Build finished. See log: $LOG_PATH"
+  # Summarize symbol upload from post-build logs
+  if grep -q "\[Sentry\]" "$LOG_PATH" || grep -q "\[Crashlytics\]" "$LOG_PATH"; then
+    if grep -q "\[Sentry\]" "$LOG_PATH"; then
+      SENT_DONE=$(awk '/\[Sentry\].*symbol upload completed in/{last=$0} END{print last}' "$LOG_PATH" || true)
+      if [[ -n "$SENT_DONE" ]]; then
+        echo "  Symbols (Sentry): ${SENT_DONE#*\[Sentry\] }"
+      else
+        SENT_SKIP=$(grep -m1 -E "\[Sentry\] (No dSYM|Missing Sentry env|Could not guess Android symbols dir)" "$LOG_PATH" || true)
+        if [[ -n "$SENT_SKIP" ]]; then
+          echo "  Symbols (Sentry): ${SENT_SKIP#*\[Sentry\] }"
+        fi
+      fi
+    fi
+    if grep -q "\[Crashlytics\]" "$LOG_PATH"; then
+      CL_DONE=$(awk '/\[Crashlytics\].*symbol upload completed in/{last=$0} END{print last}' "$LOG_PATH" || true)
+      if [[ -n "$CL_DONE" ]]; then
+        echo "  Symbols (Crashlytics): ${CL_DONE#*\[Crashlytics\] }"
+      else
+        CL_SKIP=$(grep -m1 -E "\[Crashlytics\] Skipping upload\.|\[Crashlytics\] iOS dSYMs are generated on archive" "$LOG_PATH" || true)
+        if [[ -n "$CL_SKIP" ]]; then
+          echo "  Symbols (Crashlytics): ${CL_SKIP#*\[Crashlytics\] }"
+        fi
+      fi
+    fi
+  fi
 fi
