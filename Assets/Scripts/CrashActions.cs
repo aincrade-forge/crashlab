@@ -136,7 +136,14 @@ namespace CrashLab
         public static void NativeStackOverflow()
         {
             Debug.Log("CRASHLAB::native_stack_overflow::START");
+            // On macOS, a managed stack overflow can leave the app non-responsive
+            // instead of producing a clean crash. Use a native abort there to
+            // ensure a deterministic crash event for telemetry.
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.Abort);
+#else
             RecurseForever(0);
+#endif
         }
 
         private static void RecurseForever(int d)
