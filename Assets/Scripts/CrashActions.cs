@@ -108,8 +108,12 @@ namespace CrashLab
                 }
                 catch (Exception e)
                 {
-                    // Re-throw to test capture of worker thread exceptions
-                    throw new Exception("CrashLab: worker unity api", e);
+                    // Explicitly capture so it shows up even if the runtime swallows
+                    // background thread exceptions.
+#if DIAG_SENTRY
+                    try { Sentry.SentrySdk.CaptureException(e); } catch { }
+#endif
+                    Debug.LogException(e);
                 }
             });
         }
@@ -255,7 +259,8 @@ namespace CrashLab
 
         public static void ScheduleStartupCrash(string key = "crashlab_startup_action")
         {
-            PlayerPrefs.SetString(key, "managed_unhandled");
+            // Use a native abort on next launch for deterministic fatal behavior
+            PlayerPrefs.SetString(key, "native_abort");
             PlayerPrefs.Save();
             Debug.Log("CRASHLAB::startup_crash::SCHEDULED");
         }
@@ -267,6 +272,7 @@ namespace CrashLab
             PlayerPrefs.DeleteKey(key);
             PlayerPrefs.Save();
             if (action == "managed_unhandled") ManagedUnhandled();
+            else if (action == "native_abort") NativeAbort();
         }
     }
 }
