@@ -36,7 +36,7 @@ RUN_ID=demo-run SENTRY_ORG=<org> SENTRY_PROJECT=<project> SENTRY_AUTH_TOKEN=<tok
 ```
 
 ## 6) Auto Symbol Uploads
-- The post‑build hook attempts to upload symbols by default:
-  - macOS/Android → uploads when Sentry env is configured.
-  - iOS → upload after Xcode archive using `scripts/sentry_upload_symbols.sh`.
-- Opt‑out: set `CRASHLAB_NO_UPLOAD_SYMBOLS=true` before building.
+- We rely on the Sentry Unity SDK's built‑in "Upload Symbols" option in `SentryOptions.asset`.
+  - Enable it in the Sentry settings and the SDK will upload symbols after builds.
+  - iOS dSYMs are uploaded after Xcode archive (per Sentry SDK flow).
+- The project’s custom uploader is disabled to avoid duplication.

@@ -83,12 +83,13 @@ namespace CrashLab
             {
                 if (type == LogType.Exception)
                 {
-                    var ex = new Exception(condition);
-                    if (!string.IsNullOrEmpty(stackTrace))
-                    {
-                        try { ex.Data["unity_stack"] = stackTrace; } catch { }
-                    }
-                    SentrySdk.CaptureException(ex);
+                    // Avoid duplicate exception events: the Sentry Unity SDK captures
+                    // unhandled exceptions automatically. Record a breadcrumb instead.
+                    var data = string.IsNullOrEmpty(stackTrace)
+                        ? null
+                        : new System.Collections.Generic.Dictionary<string, string> { { "stack", stackTrace } };
+                    SentrySdk.AddBreadcrumb(message: condition, category: "unity.exception", level: BreadcrumbLevel.Error, data: data);
+                    return;
                 }
                 else
                 {

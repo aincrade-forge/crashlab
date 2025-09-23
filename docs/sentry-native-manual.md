@@ -49,6 +49,5 @@ Verification matrix
 - OOM: varies by platform; iOS often reports OOM sessions.
 
 CI integration
-- Our post‑build hook uploads Sentry symbols for Android/macOS when `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` are set.
+- Symbol upload is handled by the Sentry Unity SDK when "Upload Symbols" is enabled in `SentryOptions.asset`.
 - For iOS, upload after Xcode archive; for Windows, call the script with `PDB_DIR`.
-

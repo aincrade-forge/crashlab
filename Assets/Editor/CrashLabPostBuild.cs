@@ -35,7 +35,8 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
 
             if (flavor == "sentry")
             {
-                RunSentryUpload(target, meta.Output);
+                // Rely on Sentry Unity SDK's built-in symbol upload driven by SentryOptions.asset.
+                UnityEngine.Debug.Log("[Sentry] Skipping custom symbol upload (using SentryOptions.asset Upload Symbols).");
             }
             else if (flavor == "crashlytics")
             {
@@ -91,7 +92,7 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 var sw = Stopwatch.StartNew();
                 var env = $"SENTRY_ORG='{EscapeBash(org)}' SENTRY_PROJECT='{EscapeBash(project)}' SENTRY_AUTH_TOKEN='{EscapeBash(token)}' ";
                 UnityEngine.Debug.Log($"[Sentry] Uploading macOS symbols from '{dsyms}' (creds: {source})...");
-                ShellBash(env + $"PLATFORM=macos DSYM_DIR='{dsyms}' ./scripts/sentry_upload_symbols.sh");
+                ShellBash(env + $"PLATFORM=macos DSYM_DIR='{dsyms}' bash ./scripts/sentry_upload_symbols.sh");
                 sw.Stop();
                 UnityEngine.Debug.Log($"[Sentry] macOS symbol upload completed in {Format(sw.Elapsed)}");
             }
@@ -111,7 +112,7 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 var sw = Stopwatch.StartNew();
                 var env = $"SENTRY_ORG='{EscapeBash(org)}' SENTRY_PROJECT='{EscapeBash(project)}' SENTRY_AUTH_TOKEN='{EscapeBash(token)}' ";
                 UnityEngine.Debug.Log($"[Sentry] Uploading Android symbols from '{lib}' (creds: {source})...");
-                ShellBash(env + $"PLATFORM=android ANDROID_LIB_DIR='{lib}' ./scripts/sentry_upload_symbols.sh");
+                ShellBash(env + $"PLATFORM=android ANDROID_LIB_DIR='{lib}' bash ./scripts/sentry_upload_symbols.sh");
                 sw.Stop();
                 UnityEngine.Debug.Log($"[Sentry] Android symbol upload completed in {Format(sw.Elapsed)}");
             }
@@ -138,9 +139,14 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         org = Environment.GetEnvironmentVariable("SENTRY_ORG");
         project = Environment.GetEnvironmentVariable("SENTRY_PROJECT");
         token = Environment.GetEnvironmentVariable("SENTRY_AUTH_TOKEN");
-        if (!string.IsNullOrEmpty(org) && !string.IsNullOrEmpty(project) && !string.IsNullOrEmpty(token))
+        var envOrgSet = !string.IsNullOrEmpty(org);
+        var envProjectSet = !string.IsNullOrEmpty(project);
+        var envTokenSet = !string.IsNullOrEmpty(token);
+        UnityEngine.Debug.Log($"[SentryCreds] Env check: org_set={envOrgSet} project_set={envProjectSet} token_set={envTokenSet}");
+        if (envOrgSet && envProjectSet && envTokenSet)
         {
             source = "env";
+            UnityEngine.Debug.Log($"[SentryCreds] Using env credentials org='{org}' project='{project}'");
             return true;
         }
 
@@ -154,12 +160,25 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
                 var so = new SerializedObject(obj);
                 string Get(string name)
                     => so.FindProperty($"<{name}>k__BackingField")?.stringValue;
-                var o = Get("Organization");
+                var originalOrg = Get("Organization");
+                var o = originalOrg;
                 var p = Get("Project");
                 var t = Get("Auth");
-                if (!string.IsNullOrEmpty(o) && !string.IsNullOrEmpty(p) && !string.IsNullOrEmpty(t))
+                UnityEngine.Debug.Log($"[SentryCreds] Asset check: org_set={!string.IsNullOrEmpty(o)} project_set={!string.IsNullOrEmpty(p)} token_set={!string.IsNullOrEmpty(t)}");
+                // If org is blank but token is provided, try to derive org slug from token payload
+                if (string.IsNullOrEmpty(o) && !string.IsNullOrEmpty(t))
                 {
-                    org = o; project = p; token = t; source = "SentryCliOptions.asset";
+                    var derived = DeriveOrgFromSentryToken(t);
+                    if (!string.IsNullOrEmpty(derived))
+                    {
+                        o = derived;
+                        UnityEngine.Debug.Log($"[SentryCreds] Derived org slug from token payload: '{o}'");
+                    }
+                }
+                if (!string.IsNullOrEmpty(p) && !string.IsNullOrEmpty(t) && !string.IsNullOrEmpty(o))
+                {
+                    org = o; project = p; token = t; source = string.IsNullOrEmpty(originalOrg) ? "SentryCliOptions.asset (org from token)" : "SentryCliOptions.asset";
+                    UnityEngine.Debug.Log($"[SentryCreds] Using asset credentials source='{source}' org='{org}' project='{project}'");
                     return true;
                 }
             }
@@ -167,7 +186,41 @@ public class CrashLabPostBuild : IPostprocessBuildWithReport
         catch { /* ignore */ }
 
         source = null;
+        UnityEngine.Debug.LogWarning("[SentryCreds] Credentials not resolved. Provide SENTRY_ORG/SENTRY_PROJECT/SENTRY_AUTH_TOKEN or fill SentryCliOptions.asset");
         return false;
+    }
+
+    // Attempts to decode Sentry Unity token format: sntrys_<base64(json)>_<opaque>
+    // The base64 JSON often includes keys like {"org":"<slug>", "url":"...", "region_url":"..."}
+    private static string DeriveOrgFromSentryToken(string token)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(token)) return null;
+            var parts = token.Split('_');
+            if (parts.Length < 3) return null;
+            var b64 = parts[1];
+            var bytes = System.Convert.FromBase64String(b64);
+            var json = System.Text.Encoding.UTF8.GetString(bytes);
+            // naive extraction to avoid JSON lib dependency
+            var k = "\"org\"";
+            var i = json.IndexOf(k, StringComparison.Ordinal);
+            if (i >= 0)
+            {
+                var c = json.IndexOf(':', i);
+                if (c > 0)
+                {
+                    var q1 = json.IndexOf('"', c + 1);
+                    var q2 = q1 >= 0 ? json.IndexOf('"', q1 + 1) : -1;
+                    if (q1 >= 0 && q2 > q1)
+                    {
+                        return json.Substring(q1 + 1, q2 - q1 - 1);
+                    }
+                }
+            }
+            return null;
+        }
+        catch { return null; }
     }
 
     private static string GuessAndroidSymbolsDir()

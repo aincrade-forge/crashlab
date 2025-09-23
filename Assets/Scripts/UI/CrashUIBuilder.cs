@@ -1,11 +1,19 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CrashLab.UI
 {
     public class CrashUIBuilder : MonoBehaviour
     {
+        [Serializable]
+        public enum Group
+        {
+            Crashes,
+            Errors
+        }
+
         [Serializable]
         public enum ActionType
         {
@@ -45,8 +53,12 @@ namespace CrashLab.UI
         }
 
         [Header("Layout & Prefab")]
-        [SerializeField] private RectTransform _content;
+        [SerializeField] private RectTransform _content; // optional fallback
         [SerializeField] private CrashUIButton _buttonPrefab;
+
+        [Header("Targets (assign both)")]
+        [SerializeField] private RectTransform _crashesContent;
+        [SerializeField] private RectTransform _errorsContent;
 
         // Buttons are generated at runtime on each Build() call; no cached serialized list
 
@@ -63,20 +75,52 @@ namespace CrashLab.UI
                 return;
             }
 
-            // Clear old children (designer controls layout container; we only populate)
-            for (int i = _content.childCount - 1; i >= 0; i--)
+            // Validate
+            if (_buttonPrefab == null)
             {
-                var child = _content.GetChild(i);
-                if (Application.isEditor)
-                    DestroyImmediate(child.gameObject);
-                else
-                    Destroy(child.gameObject);
+                Debug.LogWarning("CrashUIBuilder: Missing button prefab.");
+                return;
+            }
+
+            // Clear old children for both targets if assigned
+            ClearChildren(_crashesContent);
+            ClearChildren(_errorsContent);
+            if (_crashesContent == null || _errorsContent == null)
+            {
+                Debug.Log("CrashUIBuilder: Assign both Crashes Content and Errors Content. Using fallback content if provided.");
+                ClearChildren(_content);
             }
 
             foreach (var entry in BuildButtonList())
             {
-                var instance = Instantiate(_buttonPrefab, _content);
+                var group = MapGroup(entry.action);
+                RectTransform parent = null;
+                if (group == Group.Crashes) parent = _crashesContent;
+                else parent = _errorsContent;
+
+                // Fallback
+                if (parent == null) parent = _content;
+                if (parent == null)
+                {
+                    Debug.LogWarning($"CrashUIBuilder: No parent assigned for {group} → Skipping '{entry.label}'");
+                    continue;
+                }
+
+                var instance = Instantiate(_buttonPrefab, parent);
                 instance.Setup(entry.label, Resolve(entry.action));
+            }
+        }
+
+        private static void ClearChildren(RectTransform parent)
+        {
+            if (parent == null) return;
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                var child = parent.GetChild(i);
+                if (Application.isEditor)
+                    UnityEngine.Object.DestroyImmediate(child.gameObject);
+                else
+                    UnityEngine.Object.Destroy(child.gameObject);
             }
         }
 
@@ -113,6 +157,29 @@ namespace CrashLab.UI
                 default: return null;
             }
         }
+
+        private static Group MapGroup(ActionType type)
+        {
+            switch (type)
+            {
+                // Crashes: highly likely to terminate the app immediately
+                case ActionType.ManagedNullRef:
+                case ActionType.ManagedDivZero:
+                case ActionType.ManagedUnhandled:
+                case ActionType.ManagedAggregate:
+                case ActionType.NativeAccessViolation:
+                case ActionType.NativeAbort:
+                case ActionType.NativeFatal:
+                case ActionType.NativeStackOverflow:
+                    return Group.Crashes;
+
+                // Everything else: Errors (hanging, threading issues, OOM, IO/Data, diagnostics, scheduling)
+                default:
+                    return Group.Errors;
+            }
+        }
+
+        // No headers/labels; buttons go directly into the assigned containers
 
         private IEnumerable<ButtonEntry> BuildButtonList()
         {

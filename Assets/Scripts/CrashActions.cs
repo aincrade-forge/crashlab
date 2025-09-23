@@ -118,30 +118,26 @@ namespace CrashLab
         public static void NativeAccessViolation()
         {
             Debug.Log("CRASHLAB::native_av::START");
-            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.AccessViolation);
+            CrashNative.Segv();
         }
 
         public static void NativeAbort()
         {
             Debug.Log("CRASHLAB::native_abort::START");
-            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.Abort);
+            CrashNative.Abort();
         }
 
         public static void NativeFatal()
         {
             Debug.Log("CRASHLAB::native_fatal::START");
-            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.FatalError);
+            CrashNative.Abort();
         }
 
         public static void NativeStackOverflow()
         {
             Debug.Log("CRASHLAB::native_stack_overflow::START");
-            // On macOS, managed recursion can hang. Use a native abort for a deterministic crash.
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-            UnityEngine.Diagnostics.Utils.ForceCrash(UnityEngine.Diagnostics.ForcedCrashCategory.Abort);
-#else
-            RecurseForever(0);
-#endif
+            // Use abort for determinism across platforms/editors
+            CrashNative.Abort();
         }
 
         private static void RecurseForever(int d)
