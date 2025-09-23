@@ -165,7 +165,7 @@ PlayerSettings:
   androidMinAspectRatio: 1
   applicationIdentifier:
     Android: com.aincrad.crashlab
-    Standalone: com.aincrade.crashlab.unity.macos
+    Standalone: com.aincrade.crashlab.sentry.macos
     iPhone: com.aincrad.crashlab
   buildNumber:
     Standalone: 0
@@ -777,7 +777,7 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Standalone: DIAG_UNITY
+    Standalone: DIAG_SENTRY
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

@@ -21,8 +21,7 @@ namespace CrashLab
         public static void ManagedDivZero()
         {
             Debug.Log("CRASHLAB::managed_div_zero::START");
-            var x = 1 / _divZero;
-            Debug.Log(x);
+            throw new DivideByZeroException("CrashLab: managed div zero");
         }
 
         public static void ManagedUnhandled()
