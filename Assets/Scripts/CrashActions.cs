@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Diagnostics;
 
 namespace CrashLab
 {
@@ -140,7 +140,24 @@ namespace CrashLab
         public static void NativeStackOverflow()
         {
             Debug.Log("CRASHLAB::native_stack_overflow::START");
-            Utils.ForceCrash(ForcedCrashCategory.StackOverflow);
+            var thread = new Thread(StackOverflowThread, 64 * 1024)
+            {
+                IsBackground = true,
+                Name = "CrashLabStackOverflow"
+            };
+            thread.Start();
+            thread.Join();
+        }
+
+        private static void StackOverflowThread()
+        {
+            StackOverflowRecursive(0);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private static void StackOverflowRecursive(int depth)
+        {
+            StackOverflowRecursive(depth + 1);
         }
 
         public static void AndroidAnr(int seconds = 10)
@@ -177,17 +194,36 @@ namespace CrashLab
             Debug.Log("CRASHLAB::oom_heap::START");
             try
             {
-                var size = 16 * 1024 * 1024;
+                const int initialSize = 64 * 1024 * 1024;
+                const int maxSize = 512 * 1024 * 1024;
+                var size = initialSize;
+                long total = 0;
+                var allocations = 0;
                 while (true)
                 {
-                    _oom.Add(new byte[size]);
-                    size = Mathf.Min(size * 2, 256 * 1024 * 1024);
-                    Debug.Log($"CRASHLAB::oom_heap::ALLOC::{size}");
+                    var block = new byte[size];
+                    _oom.Add(block);
+                    allocations++;
+                    total += block.LongLength;
+
+                    if (allocations <= 4 || allocations % 4 == 0)
+                    {
+                        Debug.Log($"CRASHLAB::oom_heap::ALLOC::{size / (1024 * 1024)}MB::TOTAL::{total / (1024 * 1024)}MB");
+                    }
+
+                    if (size < maxSize)
+                    {
+                        size = Math.Min(size * 2, maxSize);
+                    }
                 }
+            }
+            catch (OutOfMemoryException)
+            {
+                Environment.FailFast("CrashLab: managed heap OOM");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"CRASHLAB::oom_heap::EX::{ex.GetType().Name}");
+                Environment.FailFast($"CrashLab: OOM fallback {ex.GetType().Name}:{ex.Message}");
             }
         }
 

@@ -10,6 +10,7 @@ namespace CrashLab
         private static extern int raise(int sig);
         private const int SIGILL = 4;
         private const int SIGABRT = 6;
+        private const int SIGFPE = 8;
         private const int SIGSEGV = 11;
 #endif
 
@@ -68,6 +69,24 @@ namespace CrashLab
             catch
             {
                 Environment.FailFast("CrashLab IllegalInstruction (exception)");
+            }
+        }
+
+        // Trigger a floating-point exception signal
+        public static void FloatingPointException()
+        {
+            try
+            {
+#if (UNITY_STANDALONE_OSX || UNITY_IOS || UNITY_ANDROID) && !UNITY_EDITOR_WIN
+                raise(SIGFPE);
+                Environment.FailFast("CrashLab FloatingPoint fallback");
+#else
+                Environment.FailFast("CrashLab FloatingPoint");
+#endif
+            }
+            catch
+            {
+                Environment.FailFast("CrashLab FloatingPoint (exception)");
             }
         }
 
