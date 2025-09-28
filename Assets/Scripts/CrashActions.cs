@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Diagnostics;
 
 namespace CrashLab
 {
@@ -140,13 +140,7 @@ namespace CrashLab
         public static void NativeStackOverflow()
         {
             Debug.Log("CRASHLAB::native_stack_overflow::START");
-            RecurseForever(0);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void RecurseForever(int depth)
-        {
-            RecurseForever(depth + 1);
+            Utils.ForceCrash(ForcedCrashCategory.StackOverflow);
         }
 
         public static void AndroidAnr(int seconds = 10)
