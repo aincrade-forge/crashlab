@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Diagnostics;
 
 namespace CrashLab
 {
@@ -133,14 +134,29 @@ namespace CrashLab
         public static void NativeFatal()
         {
             Debug.Log("CRASHLAB::native_fatal::START");
-            CrashNative.Abort();
+            try
+            {
+                Utils.ForceCrash(ForcedCrashCategory.FatalError);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"CRASHLAB::native_fatal::FALLBACK::{ex.GetType().Name}:{ex.Message}");
+                CrashNative.Abort();
+            }
         }
 
         public static void NativeStackOverflow()
         {
             Debug.Log("CRASHLAB::native_stack_overflow::START");
-            // Use abort for determinism across platforms/editors
-            CrashNative.Abort();
+            try
+            {
+                Utils.ForceCrash(ForcedCrashCategory.StackOverflow);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"CRASHLAB::native_stack_overflow::FALLBACK::{ex.GetType().Name}:{ex.Message}");
+                CrashNative.Abort();
+            }
         }
 
         private static void RecurseForever(int d)
@@ -231,31 +247,6 @@ namespace CrashLab
             var b = ms.ReadByte(); // ObjectDisposedException
             Debug.Log(b);
         }
-
-#if DIAG_SENTRY
-        public static void SentrySelfTest()
-        {
-            Debug.Log("CRASHLAB::sentry_selftest::START");
-            try
-            {
-                Sentry.SentrySdk.CaptureMessage("CrashLab Sentry self-test: test message");
-                try
-                {
-                    throw new InvalidOperationException("CrashLab Sentry self-test: handled exception");
-                }
-                catch (Exception ex)
-                {
-                    Sentry.SentrySdk.CaptureException(ex);
-                }
-                Sentry.SentrySdk.Flush(TimeSpan.FromSeconds(2));
-                Debug.Log("CRASHLAB::sentry_selftest::SENT");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CRASHLAB::sentry_selftest::ERROR::{e.GetType().Name}:{e.Message}");
-            }
-        }
-#endif
 
         public static void ScheduleStartupCrash(string key = "crashlab_startup_action")
         {

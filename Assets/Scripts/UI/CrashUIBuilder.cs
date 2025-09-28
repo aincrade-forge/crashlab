@@ -39,9 +39,6 @@ namespace CrashLab.UI
             BackgroundThreadUnhandled,
             ThreadPoolUnhandled,
             UnityApiFromWorker,
-#if DIAG_SENTRY
-            SentrySelfTest,
-#endif
             ScheduleStartupCrash
         }
 
@@ -150,9 +147,6 @@ namespace CrashLab.UI
                 case ActionType.BackgroundThreadUnhandled: return CrashActions.BackgroundThreadUnhandled;
                 case ActionType.ThreadPoolUnhandled: return CrashActions.ThreadPoolUnhandled;
                 case ActionType.UnityApiFromWorker: return CrashActions.UnityApiFromWorker;
-#if DIAG_SENTRY
-                case ActionType.SentrySelfTest: return CrashActions.SentrySelfTest;
-#endif
                 case ActionType.ScheduleStartupCrash: return () => CrashActions.ScheduleStartupCrash();
                 default: return null;
             }
@@ -205,9 +199,6 @@ namespace CrashLab.UI
             yield return new ButtonEntry { label = "Thread: Background Unhandled", action = ActionType.BackgroundThreadUnhandled };
             yield return new ButtonEntry { label = "Thread: ThreadPool Unhandled", action = ActionType.ThreadPoolUnhandled };
             yield return new ButtonEntry { label = "Thread: Unity API From Worker", action = ActionType.UnityApiFromWorker };
-#if DIAG_SENTRY
-            yield return new ButtonEntry { label = "Sentry: Self-test event", action = ActionType.SentrySelfTest };
-#endif
             yield return new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash };
         }
     }

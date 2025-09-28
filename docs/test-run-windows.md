@@ -23,5 +23,4 @@ Windows Test Results (x64)
 | Thread: Background Unhandled | <url> · <level> · <sym> | <url> · <level> · <sym> | |
 | Thread: ThreadPool Unhandled | <url> · <level> · <sym> | <url> · <level> · <sym> | |
 | Thread: Unity API From Worker | <url> · <level> · <sym> | <url> · <level> · <sym> | |
-| Sentry: Self-test event (Sentry flavor only) | <url> · nonfatal · n/a | — | |
 | Schedule: Startup crash | <url> · <level> · <sym> | <url> · <level> · <sym> | |
