@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Diagnostics;
 
 namespace CrashLab
 {
@@ -134,34 +134,19 @@ namespace CrashLab
         public static void NativeFatal()
         {
             Debug.Log("CRASHLAB::native_fatal::START");
-            try
-            {
-                Utils.ForceCrash(ForcedCrashCategory.FatalError);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"CRASHLAB::native_fatal::FALLBACK::{ex.GetType().Name}:{ex.Message}");
-                CrashNative.Abort();
-            }
+            CrashNative.IllegalInstruction();
         }
 
         public static void NativeStackOverflow()
         {
             Debug.Log("CRASHLAB::native_stack_overflow::START");
-            try
-            {
-                Utils.ForceCrash(ForcedCrashCategory.StackOverflow);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"CRASHLAB::native_stack_overflow::FALLBACK::{ex.GetType().Name}:{ex.Message}");
-                CrashNative.Abort();
-            }
+            RecurseForever(0);
         }
 
-        private static void RecurseForever(int d)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void RecurseForever(int depth)
         {
-            RecurseForever(d + 1);
+            RecurseForever(depth + 1);
         }
 
         public static void AndroidAnr(int seconds = 10)
