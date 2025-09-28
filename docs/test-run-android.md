@@ -17,6 +17,7 @@ Android Test Results (arm64)
 | Hang: Android ANR (10s) | <url> · <level> · <sym> | <url> · <level> · <sym> | |
 | Hang: Sync Wait (10s) | <url> · <level> · <sym> | <url> · <level> · <sym> | |
 | OOM: Heap | <url> · <level> · <sym> | <url> · <level> · <sym> | |
+| Memory: Asset bundle flood | <url> · <level> · <sym> | <url> · <level> · <sym> | Requires bundles in StreamingAssets/bundles |
 | IO: File Write Denied | <url> · <level> · <sym> | <url> · <level> · <sym> | |
 | Data: JSON Parse Error | <url> · <level> · <sym> | <url> · <level> · <sym> | |
 | Lifecycle: Use After Dispose | <url> · <level> · <sym> | <url> · <level> · <sym> | |

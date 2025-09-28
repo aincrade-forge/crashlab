@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace CrashLab
 {
@@ -11,6 +13,9 @@ namespace CrashLab
     {
         private static readonly List<byte[]> _oom = new List<byte[]>();
         private static readonly int _divZero = 0;
+        private static readonly List<AssetBundle> _assetBundleFloodBundles = new List<AssetBundle>();
+        private static readonly List<UnityEngine.Object> _assetBundleFloodAssets = new List<UnityEngine.Object>();
+        private static bool _assetBundleFloodActive;
 
         public static void ManagedNullRef()
         {
@@ -224,6 +229,106 @@ namespace CrashLab
             catch (Exception ex)
             {
                 Environment.FailFast($"CrashLab: OOM fallback {ex.GetType().Name}:{ex.Message}");
+            }
+        }
+
+        public static void AssetBundleFlood()
+        {
+            Debug.Log("CRASHLAB::asset_bundle_flood::START");
+            if (_assetBundleFloodActive)
+            {
+                Debug.LogWarning("CRASHLAB::asset_bundle_flood::RUNNING");
+                return;
+            }
+
+            _assetBundleFloodActive = true;
+            try
+            {
+                if (string.IsNullOrEmpty(Application.streamingAssetsPath))
+                {
+                    Debug.LogWarning("CRASHLAB::asset_bundle_flood::NO_STREAMING_ASSETS");
+                    return;
+                }
+
+                var bundlesRoot = Path.Combine(Application.streamingAssetsPath, "bundles");
+                if (!Directory.Exists(bundlesRoot))
+                {
+                    Debug.LogWarning($"CRASHLAB::asset_bundle_flood::MISSING_DIR::{bundlesRoot}");
+                    return;
+                }
+
+                var files = Directory.GetFiles(bundlesRoot, "*", SearchOption.AllDirectories);
+                var bundlePaths = new List<string>();
+                foreach (var file in files)
+                {
+                    var ext = Path.GetExtension(file);
+                    if (string.Equals(ext, ".bundle", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(ext, ".unity3d", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(ext, ".ab", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(ext, ".assetbundle", StringComparison.OrdinalIgnoreCase))
+                    {
+                        bundlePaths.Add(file);
+                    }
+                }
+
+                if (bundlePaths.Count == 0)
+                {
+                    Debug.LogWarning($"CRASHLAB::asset_bundle_flood::NO_FILES::{bundlesRoot}");
+                    return;
+                }
+
+                var iteration = 0;
+                while (true)
+                {
+                    foreach (var path in bundlePaths)
+                    {
+                        iteration++;
+                        var bundle = AssetBundle.LoadFromFile(path);
+                        if (bundle == null)
+                        {
+                            Debug.LogWarning($"CRASHLAB::asset_bundle_flood::LOAD_FAIL::{path}");
+                            continue;
+                        }
+
+                        _assetBundleFloodBundles.Add(bundle);
+                        try
+                        {
+                            var assets = bundle.LoadAllAssets();
+                            if (assets != null)
+                            {
+                                foreach (var asset in assets)
+                                {
+                                    if (asset != null)
+                                    {
+                                        _assetBundleFloodAssets.Add(asset);
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"CRASHLAB::asset_bundle_flood::ASSET_FAIL::{ex.GetType().Name}:{ex.Message}");
+                        }
+
+                        if (iteration % bundlePaths.Count == 0)
+                        {
+                            var allocatedMb = Profiler.GetTotalAllocatedMemoryLong() / (1024f * 1024f);
+                            Debug.Log($"CRASHLAB::asset_bundle_flood::PROGRESS::bundles={_assetBundleFloodBundles.Count}::assets={_assetBundleFloodAssets.Count}::mem={allocatedMb:F1}MB");
+                        }
+                    }
+                }
+            }
+            catch (OutOfMemoryException)
+            {
+                Environment.FailFast("CrashLab: asset bundle flood OOM");
+            }
+            catch (Exception ex)
+            {
+                Environment.FailFast($"CrashLab: asset bundle flood fatal {ex.GetType().Name}:{ex.Message}");
+            }
+            finally
+            {
+                _assetBundleFloodActive = false;
             }
         }
 

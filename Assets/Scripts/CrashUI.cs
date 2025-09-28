@@ -29,6 +29,7 @@ namespace CrashLab
             new ActionItem("Hang: Android ANR (10s)", () => CrashActions.AndroidAnr(10)),
             new ActionItem("Hang: Desktop (10s)", () => CrashActions.DesktopHang(10)),
             new ActionItem("OOM: Heap", CrashActions.OomHeap),
+            new ActionItem("Memory: Asset bundle flood", CrashActions.AssetBundleFlood),
             new ActionItem("Schedule: Startup crash", () => CrashActions.ScheduleStartupCrash()),
         };
 

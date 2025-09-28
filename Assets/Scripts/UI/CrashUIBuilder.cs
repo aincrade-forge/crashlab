@@ -39,6 +39,7 @@ namespace CrashLab.UI
             BackgroundThreadUnhandled,
             ThreadPoolUnhandled,
             UnityApiFromWorker,
+            AssetBundleFlood,
             ScheduleStartupCrash
         }
 
@@ -141,6 +142,7 @@ namespace CrashLab.UI
                 case ActionType.DesktopHang10: return () => CrashActions.DesktopHang(10);
                 case ActionType.SyncWaitHang10: return () => CrashActions.SyncWaitHang(10);
                 case ActionType.OomHeap: return CrashActions.OomHeap;
+                case ActionType.AssetBundleFlood: return CrashActions.AssetBundleFlood;
                 case ActionType.FileWriteDenied: return CrashActions.FileWriteDenied;
                 case ActionType.JsonParseError: return CrashActions.JsonParseError;
                 case ActionType.UseAfterDispose: return CrashActions.UseAfterDispose;
@@ -193,6 +195,7 @@ namespace CrashLab.UI
             yield return new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 };
             yield return new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 };
             yield return new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap };
+            yield return new ButtonEntry { label = "Memory: Asset bundle flood", action = ActionType.AssetBundleFlood };
             yield return new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied };
             yield return new ButtonEntry { label = "Data: JSON Parse Error", action = ActionType.JsonParseError };
             yield return new ButtonEntry { label = "Lifecycle: Use After Dispose", action = ActionType.UseAfterDispose };
