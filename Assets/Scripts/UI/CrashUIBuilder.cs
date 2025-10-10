@@ -1,11 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace CrashLab.UI
 {
-    public class CrashUIBuilder : MonoBehaviour
+    public class 
+        CrashUIBuilder : MonoBehaviour
     {
         [Serializable]
         public enum Group
@@ -40,7 +42,8 @@ namespace CrashLab.UI
             ThreadPoolUnhandled,
             UnityApiFromWorker,
             AssetBundleFlood,
-            ScheduleStartupCrash
+            ScheduleStartupCrash,
+            NonFatalErrorChain
         }
 
         [Serializable]
@@ -57,6 +60,28 @@ namespace CrashLab.UI
         [Header("Targets (assign both)")]
         [SerializeField] private RectTransform _crashesContent;
         [SerializeField] private RectTransform _errorsContent;
+
+        [Header("Error Chain")]
+        [SerializeField, Range(0.5f, 10f)] private float _errorChainDelaySeconds = 2.5f;
+        [SerializeField] private CrashUIButton _errorChainButton;
+
+        private Coroutine _errorChainRoutine;
+
+        private const string ErrorChainCategory = "crashlab.error_chain";
+
+        private static readonly (string Label, Action Action)[] ErrorChainSteps =
+        {
+            ("Managed: Unobserved Task", CrashActions.ManagedUnobservedTask),
+            ("Managed: IndexOutOfRange", CrashActions.ManagedIndexOutOfRange),
+            ("Managed: KeyNotFound", CrashActions.ManagedKeyNotFound),
+            ("Managed: InvalidOperation (Modify During Enum)", CrashActions.ManagedInvalidOperation_ModifiedDuringEnumeration),
+            ("Data: JSON Parse Error", CrashActions.JsonParseError),
+            ("Lifecycle: Use After Dispose", CrashActions.UseAfterDispose),
+            ("IO: File Write Denied", CrashActions.FileWriteDenied),
+            ("Thread: Background Unhandled", CrashActions.BackgroundThreadUnhandled),
+            ("Thread: ThreadPool Unhandled", CrashActions.ThreadPoolUnhandled),
+            ("Thread: Unity API From Worker", CrashActions.UnityApiFromWorker)
+        };
 
         // Buttons are generated at runtime on each Build() call; no cached serialized list
 
@@ -81,12 +106,14 @@ namespace CrashLab.UI
             }
 
             // Clear old children for both targets if assigned
+            var chainTransform = _errorChainButton != null ? _errorChainButton.transform : null;
+
             ClearChildren(_crashesContent);
-            ClearChildren(_errorsContent);
+            ClearChildren(_errorsContent, chainTransform);
             if (_crashesContent == null || _errorsContent == null)
             {
                 Debug.Log("CrashUIBuilder: Assign both Crashes Content and Errors Content. Using fallback content if provided.");
-                ClearChildren(_content);
+                ClearChildren(_content, chainTransform);
             }
 
             foreach (var entry in BuildButtonList())
@@ -107,14 +134,27 @@ namespace CrashLab.UI
                 var instance = Instantiate(_buttonPrefab, parent);
                 instance.Setup(entry.label, Resolve(entry.action));
             }
+
+            ConfigureErrorChainButton();
         }
 
-        private static void ClearChildren(RectTransform parent)
+        private void ConfigureErrorChainButton()
+        {
+            if (_errorChainButton == null)
+            {
+                return;
+            }
+
+            _errorChainButton.Setup("Raise Errors Chain", TriggerErrorChain);
+        }
+
+        private void ClearChildren(RectTransform parent, Transform exclude = null)
         {
             if (parent == null) return;
             for (int i = parent.childCount - 1; i >= 0; i--)
             {
                 var child = parent.GetChild(i);
+                if (exclude != null && (child == exclude || exclude.IsChildOf(child))) continue;
                 if (Application.isEditor)
                     UnityEngine.Object.DestroyImmediate(child.gameObject);
                 else
@@ -122,7 +162,7 @@ namespace CrashLab.UI
             }
         }
 
-        private static Action Resolve(ActionType type)
+        private Action Resolve(ActionType type)
         {
             switch (type)
             {
@@ -150,6 +190,7 @@ namespace CrashLab.UI
                 case ActionType.ThreadPoolUnhandled: return CrashActions.ThreadPoolUnhandled;
                 case ActionType.UnityApiFromWorker: return CrashActions.UnityApiFromWorker;
                 case ActionType.ScheduleStartupCrash: return () => CrashActions.ScheduleStartupCrash();
+                case ActionType.NonFatalErrorChain: return TriggerErrorChain;
                 default: return null;
             }
         }
@@ -176,6 +217,89 @@ namespace CrashLab.UI
         }
 
         // No headers/labels; buttons go directly into the assigned containers
+
+        private void TriggerErrorChain()
+        {
+            if (!isActiveAndEnabled)
+            {
+                CrashLabBreadcrumbs.Warning("Error chain requested while builder disabled", ErrorChainCategory);
+                return;
+            }
+
+            if (_errorChainRoutine != null)
+            {
+                StopCoroutine(_errorChainRoutine);
+                CrashLabBreadcrumbs.Warning("Restarting non-fatal error chain", ErrorChainCategory);
+                _errorChainRoutine = null;
+            }
+
+            CrashLabBreadcrumbs.Info("Non-fatal error chain requested", ErrorChainCategory);
+            _errorChainRoutine = StartCoroutine(RunErrorChain(ErrorChainCategory));
+        }
+
+        private IEnumerator RunErrorChain(string category)
+        {
+            var total = ErrorChainSteps.Length;
+            CrashLabBreadcrumbs.Info($"Non-fatal error chain starting ({total} steps)", category,
+                new Dictionary<string, string> { { "steps", total.ToString() } });
+
+            for (int i = 0; i < total; i++)
+            {
+                var step = ErrorChainSteps[i];
+                var index = (i + 1).ToString();
+                var stepData = new Dictionary<string, string>
+                {
+                    { "step_index", index },
+                    { "step_label", step.Label }
+                };
+
+                CrashLabBreadcrumbs.Info($"Step {index}/{total} starting: {step.Label}", category, stepData);
+                Debug.Log($"CRASHLAB::ERROR_CHAIN::START::{step.Label}");
+
+                Exception failure = null;
+                try
+                {
+                    step.Action?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    failure = ex;
+                    var errorData = new Dictionary<string, string>(stepData)
+                    {
+                        { "exception_type", ex.GetType().Name },
+                        { "exception_message", ex.Message ?? string.Empty }
+                    };
+                    CrashLabBreadcrumbs.Error($"Step {index}/{total} threw {ex.GetType().Name}", category, errorData);
+                    Debug.LogException(ex);
+                }
+
+                var resultData = new Dictionary<string, string>(stepData)
+                {
+                    { "status", failure == null ? "ok" : "exception" }
+                };
+                CrashLabBreadcrumbs.Info($"Step {index}/{total} completed", category, resultData);
+                Debug.Log($"CRASHLAB::ERROR_CHAIN::END::{step.Label}::{resultData["status"]}");
+
+                if (i < total - 1 && _errorChainDelaySeconds > 0f)
+                {
+                    yield return new WaitForSeconds(_errorChainDelaySeconds);
+                }
+            }
+
+            CrashLabBreadcrumbs.Info("Non-fatal error chain finished", category,
+                new Dictionary<string, string> { { "steps", total.ToString() } });
+            _errorChainRoutine = null;
+        }
+
+        private void OnDisable()
+        {
+            if (_errorChainRoutine != null)
+            {
+                StopCoroutine(_errorChainRoutine);
+                _errorChainRoutine = null;
+                CrashLabBreadcrumbs.Info("Non-fatal error chain cancelled (builder disabled)", ErrorChainCategory);
+            }
+        }
 
         private IEnumerable<ButtonEntry> BuildButtonList()
         {
