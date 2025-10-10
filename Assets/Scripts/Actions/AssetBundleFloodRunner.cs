@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using CrashLab;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Profiling;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.UI;
 
 namespace CrashLab.Actions
 {
@@ -18,6 +18,7 @@ namespace CrashLab.Actions
         private static readonly List<AsyncOperationHandle<UnityEngine.Object>> LoadedHandles = new();
         private static readonly List<AsyncOperationHandle<GameObject>> InstantiatedHandles = new();
         private static readonly List<UnityEngine.Object> DuplicatedAssets = new();
+        private static readonly List<byte[]> MemoryBlocks = new();
 
         public static void Run(bool forceOutOfMemory = true)
         {
@@ -47,7 +48,7 @@ namespace CrashLab.Actions
 
                 var successLoads = 0;
                 var pass = 0;
-                var maxPasses = forceOutOfMemory ? int.MaxValue : 3;
+                var maxPasses = forceOutOfMemory ? int.MaxValue : 1;
 
                 while (pass < maxPasses)
                 {
@@ -83,11 +84,6 @@ namespace CrashLab.Actions
                             { "success_loads", successLoads.ToString() },
                             { "allocated_mb", allocatedMb.ToString("F1") }
                         });
-
-                    if (!forceOutOfMemory && pass >= maxPasses)
-                    {
-                        break;
-                    }
                 }
 
                 Debug.Log($"CRASHLAB::asset_bundle_flood::COMPLETE::loads={successLoads}::passes={pass}");
@@ -147,12 +143,35 @@ namespace CrashLab.Actions
                         Addressables.Release(instanceHandle);
                     }
                 }
+                else if (asset is Sprite sprite)
+                {
+                    var go = new GameObject($"FloodSprite::{location.PrimaryKey}");
+                    var image = go.AddComponent<Image>();
+                    image.sprite = sprite;
+                    DuplicatedAssets.Add(go);
+                }
+                else if (asset is Texture texture)
+                {
+                    var go = new GameObject($"FloodTexture::{location.PrimaryKey}");
+                    var rawImage = go.AddComponent<RawImage>();
+                    rawImage.texture = texture;
+                    DuplicatedAssets.Add(go);
+                }
                 else
                 {
-                    var clone = UnityEngine.Object.Instantiate(asset);
-                    if (clone != null)
+                    var size = Profiler.GetRuntimeMemorySizeLong(asset);
+                    if (size <= 0)
                     {
-                        DuplicatedAssets.Add(clone);
+                        size = 256;
+                    }
+
+                    try
+                    {
+                        MemoryBlocks.Add(new byte[size]);
+                    }
+                    catch (OutOfMemoryException)
+                    {
+                        throw;
                     }
                 }
             }
@@ -224,6 +243,7 @@ namespace CrashLab.Actions
                 }
 
                 DuplicatedAssets.Clear();
+                MemoryBlocks.Clear();
             }
         }
     }

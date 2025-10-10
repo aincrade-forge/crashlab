@@ -234,6 +234,16 @@ namespace CrashLab
             AssetBundleFloodRunner.Run();
         }
 
+        public static void AssetBundleFloodEditor()
+        {
+#if UNITY_EDITOR
+            Debug.Log("CRASHLAB::asset_bundle_flood_editor::START");
+            AssetBundleFloodRunner.Run(false);
+#else
+            Debug.LogWarning("CRASHLAB::asset_bundle_flood_editor requested outside editor; skipping");
+#endif
+        }
+
         public static void FileWriteDenied()
         {
             Debug.Log("CRASHLAB::file_write_denied::START");

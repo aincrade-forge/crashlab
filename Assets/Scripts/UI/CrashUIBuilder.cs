@@ -41,6 +41,7 @@ namespace CrashLab.UI
             ThreadPoolUnhandled,
             UnityApiFromWorker,
             AssetBundleFlood,
+            AssetBundleFloodEditor,
             ScheduleStartupCrash,
             NonFatalErrorChain
         }
@@ -88,6 +89,7 @@ namespace CrashLab.UI
             new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 },
             new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap },
             new ButtonEntry { label = "Memory: Asset bundle flood", action = ActionType.AssetBundleFlood },
+            new ButtonEntry { label = "Memory: Asset bundle flood (editor)", action = ActionType.AssetBundleFloodEditor },
             new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied },
             new ButtonEntry { label = "Data: JSON Parse Error", action = ActionType.JsonParseError },
             new ButtonEntry { label = "Lifecycle: Use After Dispose", action = ActionType.UseAfterDispose },
@@ -198,6 +200,7 @@ namespace CrashLab.UI
                 case ActionType.SyncWaitHang10: return () => CrashActions.SyncWaitHang(10);
                 case ActionType.OomHeap: return CrashActions.OomHeap;
                 case ActionType.AssetBundleFlood: return CrashActions.AssetBundleFlood;
+                case ActionType.AssetBundleFloodEditor: return CrashActions.AssetBundleFloodEditor;
                 case ActionType.FileWriteDenied: return CrashActions.FileWriteDenied;
                 case ActionType.JsonParseError: return CrashActions.JsonParseError;
                 case ActionType.UseAfterDispose: return CrashActions.UseAfterDispose;
@@ -377,6 +380,8 @@ namespace CrashLab.UI
                     continue;
                 }
 
+                if (entry.action == ActionType.AssetBundleFloodEditor) continue;
+
                 buffer.Add(entry);
             }
 
@@ -387,7 +392,9 @@ namespace CrashLab.UI
         {
             for (int i = 0; i < ButtonDefinitions.Length; i++)
             {
-                yield return ButtonDefinitions[i];
+                var entry = ButtonDefinitions[i];
+                if (entry.action == ActionType.AssetBundleFloodEditor && !Application.isEditor) continue;
+                yield return entry;
             }
         }
     }
