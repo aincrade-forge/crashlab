@@ -208,6 +208,7 @@ namespace CrashLab.UI
                 case ActionType.NativeAbort:
                 case ActionType.NativeFatal:
                 case ActionType.NativeStackOverflow:
+                case ActionType.ScheduleStartupCrash:
                     return Group.Crashes;
 
                 // Everything else: Errors (hanging, threading issues, OOM, IO/Data, diagnostics, scheduling)
@@ -315,6 +316,7 @@ namespace CrashLab.UI
             yield return new ButtonEntry { label = "Native: Abort", action = ActionType.NativeAbort };
             yield return new ButtonEntry { label = "Native: FatalError", action = ActionType.NativeFatal };
             yield return new ButtonEntry { label = "Native: StackOverflow", action = ActionType.NativeStackOverflow };
+            yield return new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash };
             yield return new ButtonEntry { label = "Hang: Android ANR (10s)", action = ActionType.AndroidAnr10 };
             yield return new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 };
             yield return new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 };
@@ -326,7 +328,6 @@ namespace CrashLab.UI
             yield return new ButtonEntry { label = "Thread: Background Unhandled", action = ActionType.BackgroundThreadUnhandled };
             yield return new ButtonEntry { label = "Thread: ThreadPool Unhandled", action = ActionType.ThreadPoolUnhandled };
             yield return new ButtonEntry { label = "Thread: Unity API From Worker", action = ActionType.UnityApiFromWorker };
-            yield return new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash };
         }
     }
 }
