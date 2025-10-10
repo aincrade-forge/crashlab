@@ -68,19 +68,35 @@ namespace CrashLab.UI
 
         private const string ErrorChainCategory = "crashlab.error_chain";
 
-        private static readonly (string Label, Action Action)[] ErrorChainSteps =
+        private static readonly ButtonEntry[] ButtonDefinitions =
         {
-            ("Managed: Unobserved Task", CrashActions.ManagedUnobservedTask),
-            ("Managed: IndexOutOfRange", CrashActions.ManagedIndexOutOfRange),
-            ("Managed: KeyNotFound", CrashActions.ManagedKeyNotFound),
-            ("Managed: InvalidOperation (Modify During Enum)", CrashActions.ManagedInvalidOperation_ModifiedDuringEnumeration),
-            ("Data: JSON Parse Error", CrashActions.JsonParseError),
-            ("Lifecycle: Use After Dispose", CrashActions.UseAfterDispose),
-            ("IO: File Write Denied", CrashActions.FileWriteDenied),
-            ("Thread: Background Unhandled", CrashActions.BackgroundThreadUnhandled),
-            ("Thread: ThreadPool Unhandled", CrashActions.ThreadPoolUnhandled),
-            ("Thread: Unity API From Worker", CrashActions.UnityApiFromWorker)
+            new ButtonEntry { label = "Managed: NullRef", action = ActionType.ManagedNullRef },
+            new ButtonEntry { label = "Managed: DivZero", action = ActionType.ManagedDivZero },
+            new ButtonEntry { label = "Managed: Unhandled", action = ActionType.ManagedUnhandled },
+            new ButtonEntry { label = "Managed: Unobserved Task", action = ActionType.ManagedUnobservedTask },
+            new ButtonEntry { label = "Managed: IndexOutOfRange", action = ActionType.ManagedIndexOutOfRange },
+            new ButtonEntry { label = "Managed: KeyNotFound", action = ActionType.ManagedKeyNotFound },
+            new ButtonEntry { label = "Managed: InvalidOperation (Modify During Enum)", action = ActionType.ManagedInvalidOperation_ModifiedDuringEnumeration },
+            new ButtonEntry { label = "Managed: AggregateException", action = ActionType.ManagedAggregate },
+            new ButtonEntry { label = "Native: AccessViolation", action = ActionType.NativeAccessViolation },
+            new ButtonEntry { label = "Native: Abort", action = ActionType.NativeAbort },
+            new ButtonEntry { label = "Native: FatalError", action = ActionType.NativeFatal },
+            new ButtonEntry { label = "Native: StackOverflow", action = ActionType.NativeStackOverflow },
+            new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash },
+            new ButtonEntry { label = "Hang: Android ANR (10s)", action = ActionType.AndroidAnr10 },
+            new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 },
+            new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 },
+            new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap },
+            new ButtonEntry { label = "Memory: Asset bundle flood", action = ActionType.AssetBundleFlood },
+            new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied },
+            new ButtonEntry { label = "Data: JSON Parse Error", action = ActionType.JsonParseError },
+            new ButtonEntry { label = "Lifecycle: Use After Dispose", action = ActionType.UseAfterDispose },
+            new ButtonEntry { label = "Thread: Background Unhandled", action = ActionType.BackgroundThreadUnhandled },
+            new ButtonEntry { label = "Thread: ThreadPool Unhandled", action = ActionType.ThreadPoolUnhandled },
+            new ButtonEntry { label = "Thread: Unity API From Worker", action = ActionType.UnityApiFromWorker }
         };
+
+        private static readonly ButtonEntry[] ErrorChainEntries = BuildErrorChainEntries();
 
         // Buttons are generated at runtime on each Build() call; no cached serialized list
 
@@ -240,13 +256,26 @@ namespace CrashLab.UI
 
         private IEnumerator RunErrorChain(string category)
         {
-            var total = ErrorChainSteps.Length;
+            var steps = ErrorChainEntries;
+            var total = steps.Length;
+
+            if (total == 0)
+            {
+                CrashLabBreadcrumbs.Warning("Error chain requested but no error steps are configured", category);
+                Debug.LogWarning("CRASHLAB::ERROR_CHAIN::NO_STEPS");
+                _errorChainRoutine = null;
+                yield break;
+            }
+
             CrashLabBreadcrumbs.Info($"Non-fatal error chain starting ({total} steps)", category,
                 new Dictionary<string, string> { { "steps", total.ToString() } });
 
+            var successLabels = new List<string>(total);
+            var failureLabels = new List<string>();
+
             for (int i = 0; i < total; i++)
             {
-                var step = ErrorChainSteps[i];
+                var step = steps[i];
                 var index = (i + 1).ToString();
                 var stepData = new Dictionary<string, string>
                 {
@@ -260,7 +289,13 @@ namespace CrashLab.UI
                 Exception failure = null;
                 try
                 {
-                    step.Action?.Invoke();
+                    var action = Resolve(step.action);
+                    if (action == null)
+                    {
+                        throw new InvalidOperationException($"No action resolver for {step.action}");
+                    }
+
+                    action.Invoke();
                 }
                 catch (Exception ex)
                 {
@@ -282,14 +317,40 @@ namespace CrashLab.UI
                 CrashLabBreadcrumbs.Info($"Step {index}/{total} completed", category, resultData);
                 Debug.Log($"CRASHLAB::ERROR_CHAIN::END::{step.Label}::{resultData["status"]}");
 
+                if (failure == null)
+                {
+                    successLabels.Add(step.Label);
+                }
+                else
+                {
+                    failureLabels.Add(step.Label);
+                }
+
                 if (i < total - 1 && _errorChainDelaySeconds > 0f)
                 {
                     yield return new WaitForSeconds(_errorChainDelaySeconds);
                 }
             }
 
-            CrashLabBreadcrumbs.Info("Non-fatal error chain finished", category,
-                new Dictionary<string, string> { { "steps", total.ToString() } });
+            var summaryData = new Dictionary<string, string>
+            {
+                { "steps", total.ToString() },
+                { "success_count", successLabels.Count.ToString() },
+                { "failure_count", failureLabels.Count.ToString() }
+            };
+
+            if (successLabels.Count > 0)
+            {
+                summaryData["success_steps"] = string.Join(",", successLabels);
+            }
+
+            if (failureLabels.Count > 0)
+            {
+                summaryData["failure_steps"] = string.Join(",", failureLabels);
+            }
+
+            CrashLabBreadcrumbs.Info("Non-fatal error chain finished", category, summaryData);
+            Debug.Log($"CRASHLAB::ERROR_CHAIN::SUMMARY::success={successLabels.Count}:{string.Join("|", successLabels)}::failure={failureLabels.Count}:{string.Join("|", failureLabels)}");
             _errorChainRoutine = null;
         }
 
@@ -303,32 +364,29 @@ namespace CrashLab.UI
             }
         }
 
+        private static ButtonEntry[] BuildErrorChainEntries()
+        {
+            var buffer = new List<ButtonEntry>(ButtonDefinitions.Length);
+            for (int i = 0; i < ButtonDefinitions.Length; i++)
+            {
+                var entry = ButtonDefinitions[i];
+                if (MapGroup(entry.action) != Group.Errors)
+                {
+                    continue;
+                }
+
+                buffer.Add(entry);
+            }
+
+            return buffer.ToArray();
+        }
+
         private IEnumerable<ButtonEntry> BuildButtonList()
         {
-            yield return new ButtonEntry { label = "Managed: NullRef", action = ActionType.ManagedNullRef };
-            yield return new ButtonEntry { label = "Managed: DivZero", action = ActionType.ManagedDivZero };
-            yield return new ButtonEntry { label = "Managed: Unhandled", action = ActionType.ManagedUnhandled };
-            yield return new ButtonEntry { label = "Managed: Unobserved Task", action = ActionType.ManagedUnobservedTask };
-            yield return new ButtonEntry { label = "Managed: IndexOutOfRange", action = ActionType.ManagedIndexOutOfRange };
-            yield return new ButtonEntry { label = "Managed: KeyNotFound", action = ActionType.ManagedKeyNotFound };
-            yield return new ButtonEntry { label = "Managed: InvalidOperation (Modify During Enum)", action = ActionType.ManagedInvalidOperation_ModifiedDuringEnumeration };
-            yield return new ButtonEntry { label = "Managed: AggregateException", action = ActionType.ManagedAggregate };
-            yield return new ButtonEntry { label = "Native: AccessViolation", action = ActionType.NativeAccessViolation };
-            yield return new ButtonEntry { label = "Native: Abort", action = ActionType.NativeAbort };
-            yield return new ButtonEntry { label = "Native: FatalError", action = ActionType.NativeFatal };
-            yield return new ButtonEntry { label = "Native: StackOverflow", action = ActionType.NativeStackOverflow };
-            yield return new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash };
-            yield return new ButtonEntry { label = "Hang: Android ANR (10s)", action = ActionType.AndroidAnr10 };
-            yield return new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 };
-            yield return new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 };
-            yield return new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap };
-            yield return new ButtonEntry { label = "Memory: Asset bundle flood", action = ActionType.AssetBundleFlood };
-            yield return new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied };
-            yield return new ButtonEntry { label = "Data: JSON Parse Error", action = ActionType.JsonParseError };
-            yield return new ButtonEntry { label = "Lifecycle: Use After Dispose", action = ActionType.UseAfterDispose };
-            yield return new ButtonEntry { label = "Thread: Background Unhandled", action = ActionType.BackgroundThreadUnhandled };
-            yield return new ButtonEntry { label = "Thread: ThreadPool Unhandled", action = ActionType.ThreadPoolUnhandled };
-            yield return new ButtonEntry { label = "Thread: Unity API From Worker", action = ActionType.UnityApiFromWorker };
+            for (int i = 0; i < ButtonDefinitions.Length; i++)
+            {
+                yield return ButtonDefinitions[i];
+            }
         }
     }
 }
