@@ -67,6 +67,8 @@ namespace CrashLab
 
                 SentrySdk.AddBreadcrumb("CrashLab init", category: "crashlab", level: BreadcrumbLevel.Info);
 
+                EnsureSession("init");
+
                 // No env-driven selftest; use in-app UI Sentry self-test button instead
             }
             catch (Exception e)
