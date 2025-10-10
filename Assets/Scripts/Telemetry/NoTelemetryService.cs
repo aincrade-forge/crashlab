@@ -15,6 +15,11 @@ namespace CrashLab
             // No-op; Unity logs go to Player.log.
         }
 
+        public void EnsureSession(string reason = null)
+        {
+            _ = reason;
+        }
+
         private static string ToKvpString(IReadOnlyDictionary<string, string> dict)
         {
             var first = true;
@@ -29,4 +34,3 @@ namespace CrashLab
         }
     }
 }
-

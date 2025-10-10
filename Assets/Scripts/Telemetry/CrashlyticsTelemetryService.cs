@@ -23,6 +23,12 @@ namespace CrashLab
             Crashlytics.Log(condition);
         }
 
+        public void EnsureSession(string reason = null)
+        {
+            // Not supported for Crashlytics; sessions are managed automatically.
+            _ = reason;
+        }
+
         private static async void InitializeAsync(string userId, IReadOnlyDictionary<string, string> meta)
         {
             try

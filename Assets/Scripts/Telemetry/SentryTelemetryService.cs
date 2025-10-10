@@ -77,6 +77,22 @@ namespace CrashLab
 
         // Env helpers removed: simplified hardcoded setup
 
+        public void EnsureSession(string reason = null)
+        {
+            try
+            {
+                SentrySdk.StartSession();
+                if (!string.IsNullOrEmpty(reason))
+                {
+                    SentrySdk.AddBreadcrumb($"Session started: {reason}", category: "crashlab.session", level: BreadcrumbLevel.Info);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"CRASHLAB::SENTRY::SESSION_FAIL::{e.GetType().Name}:{e.Message}");
+            }
+        }
+
         public void OnLog(string condition, string stackTrace, LogType type)
         {
             try

@@ -24,6 +24,11 @@ namespace CrashLab
             // No explicit breadcrumbs API; rely on logs and metadata.
         }
 
+        public void EnsureSession(string reason = null)
+        {
+            _ = reason;
+        }
+
         private static async void InitializeAsync(string userId, IReadOnlyDictionary<string, string> meta, string environment)
         {
             try

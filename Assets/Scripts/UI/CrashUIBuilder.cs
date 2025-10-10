@@ -6,8 +6,7 @@ using UnityEngine.UI;
 
 namespace CrashLab.UI
 {
-    public class 
-        CrashUIBuilder : MonoBehaviour
+    public class CrashUIBuilder : MonoBehaviour
     {
         [Serializable]
         public enum Group
@@ -234,6 +233,7 @@ namespace CrashLab.UI
                 _errorChainRoutine = null;
             }
 
+            CrashLabTelemetry.EnsureSession("error_chain");
             CrashLabBreadcrumbs.Info("Non-fatal error chain requested", ErrorChainCategory);
             _errorChainRoutine = StartCoroutine(RunErrorChain(ErrorChainCategory));
         }
@@ -271,6 +271,7 @@ namespace CrashLab.UI
                         { "exception_message", ex.Message ?? string.Empty }
                     };
                     CrashLabBreadcrumbs.Error($"Step {index}/{total} threw {ex.GetType().Name}", category, errorData);
+                    Debug.LogError($"CRASHLAB::ERROR_CHAIN::EXCEPTION::{step.Label}::{ex.GetType().Name}:{ex.Message}");
                     Debug.LogException(ex);
                 }
 
