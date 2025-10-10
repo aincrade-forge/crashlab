@@ -280,11 +280,11 @@ namespace CrashLab.UI
                 var stepData = new Dictionary<string, string>
                 {
                     { "step_index", index },
-                    { "step_label", step.Label }
+                    { "step_label", step.label }
                 };
 
-                CrashLabBreadcrumbs.Info($"Step {index}/{total} starting: {step.Label}", category, stepData);
-                Debug.Log($"CRASHLAB::ERROR_CHAIN::START::{step.Label}");
+                CrashLabBreadcrumbs.Info($"Step {index}/{total} starting: {step.label}", category, stepData);
+                Debug.Log($"CRASHLAB::ERROR_CHAIN::START::{step.label}");
 
                 Exception failure = null;
                 try
@@ -306,7 +306,7 @@ namespace CrashLab.UI
                         { "exception_message", ex.Message ?? string.Empty }
                     };
                     CrashLabBreadcrumbs.Error($"Step {index}/{total} threw {ex.GetType().Name}", category, errorData);
-                    Debug.LogError($"CRASHLAB::ERROR_CHAIN::EXCEPTION::{step.Label}::{ex.GetType().Name}:{ex.Message}");
+                    Debug.LogError($"CRASHLAB::ERROR_CHAIN::EXCEPTION::{step.label}::{ex.GetType().Name}:{ex.Message}");
                     Debug.LogException(ex);
                 }
 
@@ -315,15 +315,15 @@ namespace CrashLab.UI
                     { "status", failure == null ? "ok" : "exception" }
                 };
                 CrashLabBreadcrumbs.Info($"Step {index}/{total} completed", category, resultData);
-                Debug.Log($"CRASHLAB::ERROR_CHAIN::END::{step.Label}::{resultData["status"]}");
+                Debug.Log($"CRASHLAB::ERROR_CHAIN::END::{step.label}::{resultData["status"]}");
 
                 if (failure == null)
                 {
-                    successLabels.Add(step.Label);
+                    successLabels.Add(step.label);
                 }
                 else
                 {
-                    failureLabels.Add(step.Label);
+                    failureLabels.Add(step.label);
                 }
 
                 if (i < total - 1 && _errorChainDelaySeconds > 0f)
