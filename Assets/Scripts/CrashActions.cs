@@ -12,7 +12,6 @@ namespace CrashLab
     public static class CrashActions
     {
         private static readonly List<byte[]> _oom = new List<byte[]>();
-        private static readonly int _divZero = 0;
         private static readonly List<AssetBundle> _assetBundleFloodBundles = new List<AssetBundle>();
         private static readonly List<UnityEngine.Object> _assetBundleFloodAssets = new List<UnityEngine.Object>();
         private static bool _assetBundleFloodActive;
@@ -277,9 +276,12 @@ namespace CrashLab
                     return;
                 }
 
+                const int maxPasses = 3;
+                var pass = 0;
                 var iteration = 0;
-                while (true)
+                while (pass < maxPasses)
                 {
+                    pass++;
                     foreach (var path in bundlePaths)
                     {
                         iteration++;
@@ -317,6 +319,8 @@ namespace CrashLab
                         }
                     }
                 }
+
+                Debug.Log($"CRASHLAB::asset_bundle_flood::COMPLETE::passes={pass}::bundles={_assetBundleFloodBundles.Count}::assets={_assetBundleFloodAssets.Count}");
             }
             catch (OutOfMemoryException)
             {
@@ -329,6 +333,22 @@ namespace CrashLab
             finally
             {
                 _assetBundleFloodActive = false;
+
+                for (int i = 0; i < _assetBundleFloodBundles.Count; i++)
+                {
+                    try
+                    {
+                        _assetBundleFloodBundles[i].Unload(unloadAllLoadedObjects: false);
+                    }
+                    catch
+                    {
+                        // Ignore unload failures, we're recovering from a stress scenario.
+                    }
+                }
+
+                _assetBundleFloodBundles.Clear();
+                _assetBundleFloodAssets.Clear();
+                Debug.Log("CRASHLAB::asset_bundle_flood::END");
             }
         }
 
