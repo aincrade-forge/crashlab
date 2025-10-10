@@ -225,6 +225,7 @@ namespace CrashLab.UI
                 case ActionType.NativeStackOverflow:
                 case ActionType.ScheduleStartupCrash:
                 case ActionType.OomHeap:
+                case ActionType.AssetBundleFlood:
                     return Group.Crashes;
 
                 // Everything else: Errors (hanging, threading issues, OOM, IO/Data, diagnostics, scheduling)

@@ -5,16 +5,13 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Profiling;
+using CrashLab.Actions;
 
 namespace CrashLab
 {
     public static class CrashActions
     {
         private static readonly List<byte[]> _oom = new List<byte[]>();
-        private static readonly List<AssetBundle> _assetBundleFloodBundles = new List<AssetBundle>();
-        private static readonly List<UnityEngine.Object> _assetBundleFloodAssets = new List<UnityEngine.Object>();
-        private static bool _assetBundleFloodActive;
 
         public static void ManagedNullRef()
         {
@@ -234,122 +231,7 @@ namespace CrashLab
         public static void AssetBundleFlood()
         {
             Debug.Log("CRASHLAB::asset_bundle_flood::START");
-            if (_assetBundleFloodActive)
-            {
-                Debug.LogWarning("CRASHLAB::asset_bundle_flood::RUNNING");
-                return;
-            }
-
-            _assetBundleFloodActive = true;
-            try
-            {
-                if (string.IsNullOrEmpty(Application.streamingAssetsPath))
-                {
-                    Debug.LogWarning("CRASHLAB::asset_bundle_flood::NO_STREAMING_ASSETS");
-                    return;
-                }
-
-                var bundlesRoot = Path.Combine(Application.streamingAssetsPath, "bundles");
-                if (!Directory.Exists(bundlesRoot))
-                {
-                    Debug.LogWarning($"CRASHLAB::asset_bundle_flood::MISSING_DIR::{bundlesRoot}");
-                    return;
-                }
-
-                var files = Directory.GetFiles(bundlesRoot, "*", SearchOption.AllDirectories);
-                var bundlePaths = new List<string>();
-                foreach (var file in files)
-                {
-                    var ext = Path.GetExtension(file);
-                    if (string.Equals(ext, ".bundle", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(ext, ".unity3d", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(ext, ".ab", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(ext, ".assetbundle", StringComparison.OrdinalIgnoreCase))
-                    {
-                        bundlePaths.Add(file);
-                    }
-                }
-
-                if (bundlePaths.Count == 0)
-                {
-                    Debug.LogWarning($"CRASHLAB::asset_bundle_flood::NO_FILES::{bundlesRoot}");
-                    return;
-                }
-
-                const int maxPasses = 3;
-                var pass = 0;
-                var iteration = 0;
-                while (pass < maxPasses)
-                {
-                    pass++;
-                    foreach (var path in bundlePaths)
-                    {
-                        iteration++;
-                        var bundle = AssetBundle.LoadFromFile(path);
-                        if (bundle == null)
-                        {
-                            Debug.LogWarning($"CRASHLAB::asset_bundle_flood::LOAD_FAIL::{path}");
-                            continue;
-                        }
-
-                        _assetBundleFloodBundles.Add(bundle);
-                        try
-                        {
-                            var assets = bundle.LoadAllAssets();
-                            if (assets != null)
-                            {
-                                foreach (var asset in assets)
-                                {
-                                    if (asset != null)
-                                    {
-                                        _assetBundleFloodAssets.Add(asset);
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogWarning($"CRASHLAB::asset_bundle_flood::ASSET_FAIL::{ex.GetType().Name}:{ex.Message}");
-                        }
-
-                        if (iteration % bundlePaths.Count == 0)
-                        {
-                            var allocatedMb = Profiler.GetTotalAllocatedMemoryLong() / (1024f * 1024f);
-                            Debug.Log($"CRASHLAB::asset_bundle_flood::PROGRESS::bundles={_assetBundleFloodBundles.Count}::assets={_assetBundleFloodAssets.Count}::mem={allocatedMb:F1}MB");
-                        }
-                    }
-                }
-
-                Debug.Log($"CRASHLAB::asset_bundle_flood::COMPLETE::passes={pass}::bundles={_assetBundleFloodBundles.Count}::assets={_assetBundleFloodAssets.Count}");
-            }
-            catch (OutOfMemoryException)
-            {
-                Environment.FailFast("CrashLab: asset bundle flood OOM");
-            }
-            catch (Exception ex)
-            {
-                Environment.FailFast($"CrashLab: asset bundle flood fatal {ex.GetType().Name}:{ex.Message}");
-            }
-            finally
-            {
-                _assetBundleFloodActive = false;
-
-                for (int i = 0; i < _assetBundleFloodBundles.Count; i++)
-                {
-                    try
-                    {
-                        _assetBundleFloodBundles[i].Unload(unloadAllLoadedObjects: false);
-                    }
-                    catch
-                    {
-                        // Ignore unload failures, we're recovering from a stress scenario.
-                    }
-                }
-
-                _assetBundleFloodBundles.Clear();
-                _assetBundleFloodAssets.Clear();
-                Debug.Log("CRASHLAB::asset_bundle_flood::END");
-            }
+            AssetBundleFloodRunner.Run();
         }
 
         public static void FileWriteDenied()
