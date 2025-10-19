@@ -217,21 +217,17 @@ namespace CrashLab.UI
         {
             switch (type)
             {
-                // Crashes: highly likely to terminate the app immediately
-                case ActionType.ManagedNullRef:
-                case ActionType.ManagedDivZero:
-                case ActionType.ManagedUnhandled:
-                case ActionType.ManagedAggregate:
+                // Crashes: actions that intentionally terminate or hang the process/runtime
                 case ActionType.NativeAccessViolation:
                 case ActionType.NativeAbort:
                 case ActionType.NativeFatal:
                 case ActionType.NativeStackOverflow:
-                case ActionType.ScheduleStartupCrash:
                 case ActionType.OomHeap:
                 case ActionType.AssetBundleFlood:
+                case ActionType.ScheduleStartupCrash:
                     return Group.Crashes;
 
-                // Everything else: Errors (hanging, threading issues, OOM, IO/Data, diagnostics, scheduling)
+                // Everything else: non-fatal errors and diagnostic scenarios
                 default:
                     return Group.Errors;
             }

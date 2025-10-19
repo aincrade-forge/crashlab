@@ -11,38 +11,38 @@ namespace CrashLab.Actions
 {
     public static class AssetBundleFloodRunner
     {
-        public const string FloodLabel = "crashlab.asset_flood";
-        private const string BreadcrumbCategory = "crashlab.asset_bundle_flood";
+        public const string FLOOD_LABEL = "crashlab.asset_flood";
+        private const string BREADCRUMB_CATEGORY = "crashlab.asset_bundle_flood";
 
         private static bool _active;
-        private static readonly List<AsyncOperationHandle<UnityEngine.Object>> LoadedHandles = new();
-        private static readonly List<AsyncOperationHandle<GameObject>> InstantiatedHandles = new();
-        private static readonly List<UnityEngine.Object> DuplicatedAssets = new();
-        private static readonly List<byte[]> MemoryBlocks = new();
+        private static readonly List<AsyncOperationHandle<UnityEngine.Object>> _loadedHandles = new();
+        private static readonly List<AsyncOperationHandle<GameObject>> _instantiatedHandles = new();
+        private static readonly List<UnityEngine.Object> _duplicatedAssets = new();
+        private static readonly List<byte[]> _memoryBlocks = new();
 
         public static void Run(bool forceOutOfMemory = true)
         {
             if (_active)
             {
                 Debug.LogWarning("CRASHLAB::asset_bundle_flood::RUNNING");
-                CrashLabBreadcrumbs.Warning("Asset bundle flood already running", BreadcrumbCategory);
+                CrashLabBreadcrumbs.Warning("Asset bundle flood already running", BREADCRUMB_CATEGORY);
                 return;
             }
 
             _active = true;
-            CrashLabBreadcrumbs.Info("Asset bundle flood requested", BreadcrumbCategory,
+            CrashLabBreadcrumbs.Info("Asset bundle flood requested", BREADCRUMB_CATEGORY,
                 new Dictionary<string, string> { { "force_oom", forceOutOfMemory.ToString() } });
 
             AsyncOperationHandle<IList<IResourceLocation>> locationsHandle = default;
             try
             {
-                locationsHandle = Addressables.LoadResourceLocationsAsync(FloodLabel);
+                locationsHandle = Addressables.LoadResourceLocationsAsync(FLOOD_LABEL);
                 var locations = locationsHandle.WaitForCompletion();
                 if (locations == null || locations.Count == 0)
                 {
-                    Debug.LogWarning($"CRASHLAB::asset_bundle_flood::NO_LOCATIONS::{FloodLabel}. Run 'CrashLab/Addressables/Sync Flood Assets' to register assets.");
-                    CrashLabBreadcrumbs.Warning("No addressable assets tagged for flood", BreadcrumbCategory,
-                        new Dictionary<string, string> { { "label", FloodLabel } });
+                    Debug.LogWarning($"CRASHLAB::asset_bundle_flood::NO_LOCATIONS::{FLOOD_LABEL}. Run 'CrashLab/Addressables/Sync Flood Assets' to register assets.");
+                    CrashLabBreadcrumbs.Warning("No addressable assets tagged for flood", BREADCRUMB_CATEGORY,
+                        new Dictionary<string, string> { { "label", FLOOD_LABEL } });
                     return;
                 }
 
@@ -60,13 +60,13 @@ namespace CrashLab.Actions
                         if (asset == null)
                         {
                             Debug.LogWarning($"CRASHLAB::asset_bundle_flood::LOAD_FAIL::{location.PrimaryKey}");
-                            CrashLabBreadcrumbs.Warning("Addressables load returned null", BreadcrumbCategory,
+                            CrashLabBreadcrumbs.Warning("Addressables load returned null", BREADCRUMB_CATEGORY,
                                 new Dictionary<string, string> { { "location", location.PrimaryKey } });
                             Addressables.Release(handle);
                             continue;
                         }
 
-                        LoadedHandles.Add(handle);
+                        _loadedHandles.Add(handle);
                         successLoads++;
 
                         if (forceOutOfMemory)
@@ -77,7 +77,7 @@ namespace CrashLab.Actions
 
                     var allocatedMb = Profiler.GetTotalAllocatedMemoryLong() / (1024f * 1024f);
                     Debug.Log($"CRASHLAB::asset_bundle_flood::PASS::{pass}::loaded={successLoads}::mem={allocatedMb:F1}MB");
-                    CrashLabBreadcrumbs.Info("Asset bundle flood pass complete", BreadcrumbCategory,
+                    CrashLabBreadcrumbs.Info("Asset bundle flood pass complete", BREADCRUMB_CATEGORY,
                         new Dictionary<string, string>
                         {
                             { "pass", pass.ToString() },
@@ -87,7 +87,7 @@ namespace CrashLab.Actions
                 }
 
                 Debug.Log($"CRASHLAB::asset_bundle_flood::COMPLETE::loads={successLoads}::passes={pass}");
-                CrashLabBreadcrumbs.Info("Asset bundle flood finished", BreadcrumbCategory,
+                CrashLabBreadcrumbs.Info("Asset bundle flood finished", BREADCRUMB_CATEGORY,
                     new Dictionary<string, string>
                     {
                         { "loads", successLoads.ToString() },
@@ -97,7 +97,7 @@ namespace CrashLab.Actions
             catch (OutOfMemoryException oom)
             {
                 Debug.LogError("CRASHLAB::asset_bundle_flood::OOM");
-                CrashLabBreadcrumbs.Error("Asset bundle flood triggered OutOfMemoryException", BreadcrumbCategory,
+                CrashLabBreadcrumbs.Error("Asset bundle flood triggered OutOfMemoryException", BREADCRUMB_CATEGORY,
                     new Dictionary<string, string> { { "exception_message", oom.Message } });
                 throw;
             }
@@ -105,7 +105,7 @@ namespace CrashLab.Actions
             {
                 Debug.LogError($"CRASHLAB::asset_bundle_flood::ERROR::{ex.GetType().Name}:{ex.Message}");
                 Debug.LogException(ex);
-                CrashLabBreadcrumbs.Error("Asset bundle flood failed", BreadcrumbCategory,
+                CrashLabBreadcrumbs.Error("Asset bundle flood failed", BREADCRUMB_CATEGORY,
                     new Dictionary<string, string>
                     {
                         { "exception_type", ex.GetType().Name },
@@ -136,7 +136,7 @@ namespace CrashLab.Actions
                     var instance = instanceHandle.WaitForCompletion();
                     if (instance != null)
                     {
-                        InstantiatedHandles.Add(instanceHandle);
+                        _instantiatedHandles.Add(instanceHandle);
                     }
                     else
                     {
@@ -148,14 +148,14 @@ namespace CrashLab.Actions
                     var go = new GameObject($"FloodSprite::{location.PrimaryKey}");
                     var image = go.AddComponent<Image>();
                     image.sprite = sprite;
-                    DuplicatedAssets.Add(go);
+                    _duplicatedAssets.Add(go);
                 }
                 else if (asset is Texture texture)
                 {
                     var go = new GameObject($"FloodTexture::{location.PrimaryKey}");
                     var rawImage = go.AddComponent<RawImage>();
                     rawImage.texture = texture;
-                    DuplicatedAssets.Add(go);
+                    _duplicatedAssets.Add(go);
                 }
                 else
                 {
@@ -167,7 +167,7 @@ namespace CrashLab.Actions
 
                     try
                     {
-                        MemoryBlocks.Add(new byte[size]);
+                        _memoryBlocks.Add(new byte[size]);
                     }
                     catch (OutOfMemoryException)
                     {
@@ -178,7 +178,7 @@ namespace CrashLab.Actions
             catch (Exception ex)
             {
                 Debug.LogWarning($"CRASHLAB::asset_bundle_flood::DUPLICATE_FAIL::{location.PrimaryKey}::{ex.GetType().Name}:{ex.Message}");
-                CrashLabBreadcrumbs.Warning("Failed to duplicate asset during flood", BreadcrumbCategory,
+                CrashLabBreadcrumbs.Warning("Failed to duplicate asset during flood", BREADCRUMB_CATEGORY,
                     new Dictionary<string, string>
                     {
                         { "location", location.PrimaryKey },
@@ -191,20 +191,20 @@ namespace CrashLab.Actions
         {
             try
             {
-                for (int i = 0; i < LoadedHandles.Count; i++)
+                for (int i = 0; i < _loadedHandles.Count; i++)
                 {
-                    Addressables.Release(LoadedHandles[i]);
+                    Addressables.Release(_loadedHandles[i]);
                 }
 
-                for (int i = 0; i < InstantiatedHandles.Count; i++)
+                for (int i = 0; i < _instantiatedHandles.Count; i++)
                 {
-                    Addressables.Release(InstantiatedHandles[i]);
+                    Addressables.Release(_instantiatedHandles[i]);
                 }
             }
             catch (Exception releaseEx)
             {
                 Debug.LogWarning($"CRASHLAB::asset_bundle_flood::RELEASE_FAIL::{releaseEx.GetType().Name}:{releaseEx.Message}");
-                CrashLabBreadcrumbs.Warning("Failed to release addressable handles", BreadcrumbCategory,
+                CrashLabBreadcrumbs.Warning("Failed to release addressable handles", BREADCRUMB_CATEGORY,
                     new Dictionary<string, string>
                     {
                         { "exception_type", releaseEx.GetType().Name }
@@ -212,12 +212,12 @@ namespace CrashLab.Actions
             }
             finally
             {
-                LoadedHandles.Clear();
-                InstantiatedHandles.Clear();
+                _loadedHandles.Clear();
+                _instantiatedHandles.Clear();
 
-                for (int i = 0; i < DuplicatedAssets.Count; i++)
+                for (int i = 0; i < _duplicatedAssets.Count; i++)
                 {
-                    var clone = DuplicatedAssets[i];
+                    var clone = _duplicatedAssets[i];
                     if (clone == null)
                     {
                         continue;
@@ -242,8 +242,8 @@ namespace CrashLab.Actions
                     }
                 }
 
-                DuplicatedAssets.Clear();
-                MemoryBlocks.Clear();
+                _duplicatedAssets.Clear();
+                _memoryBlocks.Clear();
             }
         }
     }

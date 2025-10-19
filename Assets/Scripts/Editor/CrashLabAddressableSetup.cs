@@ -23,9 +23,9 @@ namespace CrashLab.Editor
             }
 
             var labels = settings.GetLabels();
-            if (!labels.Contains(AssetBundleFloodRunner.FloodLabel))
+            if (!labels.Contains(AssetBundleFloodRunner.FLOOD_LABEL))
             {
-                settings.AddLabel(AssetBundleFloodRunner.FloodLabel);
+                settings.AddLabel(AssetBundleFloodRunner.FLOOD_LABEL);
             }
 
             var group = settings.FindGroup("Default Local Group") ?? settings.DefaultGroup;
@@ -58,13 +58,13 @@ namespace CrashLab.Editor
                 }
 
                 entry.address = assetPath;
-                entry.SetLabel(AssetBundleFloodRunner.FloodLabel, true, true);
+                entry.SetLabel(AssetBundleFloodRunner.FLOOD_LABEL, true, true);
                 registered++;
             }
 
             settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, group, true);
             AssetDatabase.SaveAssets();
-            Debug.Log($"CrashLab Addressables: Synced {registered} prefabs to label '{AssetBundleFloodRunner.FloodLabel}'.");
+            Debug.Log($"CrashLab Addressables: Synced {registered} prefabs to label '{AssetBundleFloodRunner.FLOOD_LABEL}'.");
         }
     }
 }
