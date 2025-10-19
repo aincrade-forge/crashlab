@@ -1,14 +1,14 @@
 # Unity
-/Library/
-/Temp/
-/Obj/
-/Build/
-/Builds/
-/Artifacts/
-/Logs/
-/UserSettings/
-/MemoryCaptures/
-/Recordings/
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Artifacts/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
 
 # IDE/Editor
 .vs/

@@ -6,7 +6,14 @@ set -euo pipefail
 #  - Build matrix: MATRIX=true TARGETS="windows-x64,macos-arm64,android-arm64,ios-arm64" ./build.sh
 #  - Test matrix: TESTS=true FLAVORS="sentry,unity" ./build.sh
 
-PROJECT_PATH="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_PATH="${PROJECT_PATH_OVERRIDE:-$SCRIPT_DIR}"
+
+if [[ ! -f "$PROJECT_PATH/ProjectSettings/ProjectVersion.txt" && -d "$SCRIPT_DIR/clients/base" ]]; then
+  if [[ -f "$SCRIPT_DIR/clients/base/ProjectSettings/ProjectVersion.txt" ]]; then
+    PROJECT_PATH="$SCRIPT_DIR/clients/base"
+  fi
+fi
 UNITY_VERSION=$(sed -n 's/^m_EditorVersion: \(.*\)$/\1/p' "$PROJECT_PATH/ProjectSettings/ProjectVersion.txt")
 UNITY_APP="/Applications/Unity/Hub/Editor/$UNITY_VERSION/Unity.app/Contents/MacOS/Unity"
 
