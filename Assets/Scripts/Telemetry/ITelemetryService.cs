@@ -7,6 +7,5 @@ namespace CrashLab
     {
         void Initialize(string userId, IReadOnlyDictionary<string, string> meta, string release, string environment);
         void OnLog(string condition, string stackTrace, LogType type);
-        void EnsureSession(string reason = null);
     }
 }

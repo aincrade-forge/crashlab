@@ -5,9 +5,8 @@ using UnityEngine;
 #if DIAG_SENTRY
 using Sentry;
 using Sentry.Unity;
-using Sentry.Protocol;
-
 #endif
+
 namespace CrashLab
 {
 #if DIAG_SENTRY
@@ -64,34 +63,14 @@ namespace CrashLab
                         scope.SetTag(kv.Key, kv.Value);
                     }
                 });
-
+                
                 SentrySdk.AddBreadcrumb("CrashLab init", category: "crashlab", level: BreadcrumbLevel.Info);
-
-                EnsureSession("init");
 
                 // No env-driven selftest; use in-app UI Sentry self-test button instead
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"CrashLab Sentry init error: {e.Message}");
-            }
-        }
-
-        // Env helpers removed: simplified hardcoded setup
-
-        public void EnsureSession(string reason = null)
-        {
-            try
-            {
-                SentrySdk.StartSession();
-                if (!string.IsNullOrEmpty(reason))
-                {
-                    SentrySdk.AddBreadcrumb($"Session started: {reason}", category: "crashlab.session", level: BreadcrumbLevel.Info);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CRASHLAB::SENTRY::SESSION_FAIL::{e.GetType().Name}:{e.Message}");
             }
         }
 
@@ -103,11 +82,13 @@ namespace CrashLab
                 {
                     // Avoid duplicate exception events: the Sentry Unity SDK captures
                     // unhandled exceptions automatically. Record a breadcrumb instead.
-                    var data = string.IsNullOrEmpty(stackTrace)
-                        ? null
-                        : new System.Collections.Generic.Dictionary<string, string> { { "stack", stackTrace } };
+                    Dictionary<string, string> data;
+                    if (string.IsNullOrEmpty(stackTrace))
+                        data = null;
+                    else
+                        data = new Dictionary<string, string> { { "stack", stackTrace } };
+                   
                     SentrySdk.AddBreadcrumb(message: condition, category: "unity.exception", level: BreadcrumbLevel.Error, data: data);
-                    return;
                 }
                 else
                 {
@@ -116,7 +97,6 @@ namespace CrashLab
                         LogType.Error => BreadcrumbLevel.Error,
                         LogType.Assert => BreadcrumbLevel.Error,
                         LogType.Warning => BreadcrumbLevel.Warning,
-                        LogType.Log => BreadcrumbLevel.Info,
                         _ => BreadcrumbLevel.Info
                     };
                     SentrySdk.AddBreadcrumb(condition, category: "unity.log", level: level);

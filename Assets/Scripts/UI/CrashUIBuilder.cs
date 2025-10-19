@@ -254,7 +254,6 @@ namespace CrashLab.UI
                 _errorChainRoutine = null;
             }
 
-            CrashLabTelemetry.EnsureSession("error_chain");
             CrashLabBreadcrumbs.Info("Non-fatal error chain requested", ErrorChainCategory);
             _errorChainRoutine = StartCoroutine(RunErrorChain(ErrorChainCategory));
         }

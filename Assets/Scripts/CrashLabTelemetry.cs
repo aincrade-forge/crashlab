@@ -92,24 +92,6 @@ namespace CrashLab
             Debug.Log($"CRASHLAB::INIT::run_id={runId}");
         }
 
-        public static void EnsureSession(string reason = null)
-        {
-            if (_service == null)
-            {
-                Debug.LogWarning("CrashLabTelemetry session requested before initialization");
-                return;
-            }
-
-            try
-            {
-                _service.EnsureSession(reason);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"CrashLabTelemetry session start failed: {e.Message}");
-            }
-        }
-
         private static void OnLog(string condition, string stackTrace, LogType type)
         {
             _service?.OnLog(condition, stackTrace, type);
