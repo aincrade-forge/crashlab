@@ -2,9 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+#if UNITY_IOS || UNITY_TVOS || UNITY_ANDROID
+using AOT;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Diagnostics;
 using CrashLab.Actions;
 
 namespace CrashLab
@@ -12,6 +17,36 @@ namespace CrashLab
     public static class CrashActions
     {
         private static readonly List<byte[]> _oom = new List<byte[]>();
+
+#if (UNITY_IOS || UNITY_TVOS || UNITY_STANDALONE_OSX || UNITY_ANDROID) && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void throw_cpp();
+
+        [DllImport("__Internal")]
+        private static extern void crash_in_cpp();
+
+        [DllImport("__Internal")]
+        private static extern void crash_in_c();
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate void NativeCallback(int code);
+
+        [DllImport("__Internal")]
+        private static extern void call_into_csharp(NativeCallback callback);
+
+#if UNITY_IOS
+        [DllImport("__Internal")]
+        private static extern void throwObjectiveC();
+#endif
+
+#if (UNITY_IOS || UNITY_TVOS || UNITY_ANDROID)
+        [AOT.MonoPInvokeCallback(typeof(NativeCallback))]
+#endif
+        private static void NativeCallbackHandler(int code)
+        {
+            throw new Exception($"CrashLab native callback exception (code={code})");
+        }
+#endif
 
         public static void ManagedNullRef()
         {
@@ -24,6 +59,121 @@ namespace CrashLab
         {
             Debug.Log("CRASHLAB::managed_div_zero::START");
             throw new DivideByZeroException("CrashLab: managed div zero");
+        }
+
+        public static void NativeForceCrash()
+        {
+            Debug.Log("CRASHLAB::native_force_crash::START");
+#if UNITY_EDITOR
+            Debug.LogWarning("Unity Diagnostics ForceCrash is disabled in the Editor to avoid shutting down Unity.");
+#else
+            Utils.ForceCrash(ForcedCrashCategory.AccessViolation);
+#endif
+        }
+
+        public static void NativeThrowCpp()
+        {
+            Debug.Log("CRASHLAB::native_throw_cpp::START");
+#if (UNITY_IOS || UNITY_TVOS || UNITY_STANDALONE_OSX || UNITY_ANDROID) && !UNITY_EDITOR
+            throw_cpp();
+#else
+            Debug.LogWarning("Native C++ throw requires an IL2CPP player build.");
+#endif
+        }
+
+        public static void NativeCrashInCpp()
+        {
+            Debug.Log("CRASHLAB::native_crash_in_cpp::START");
+#if (UNITY_IOS || UNITY_TVOS || UNITY_STANDALONE_OSX || UNITY_ANDROID) && !UNITY_EDITOR
+            crash_in_cpp();
+#else
+            Debug.LogWarning("Native crash_in_cpp requires an IL2CPP player build.");
+#endif
+        }
+
+        public static void NativeCrashInC()
+        {
+            Debug.Log("CRASHLAB::native_crash_in_c::START");
+#if (UNITY_IOS || UNITY_TVOS || UNITY_STANDALONE_OSX || UNITY_ANDROID) && !UNITY_EDITOR
+            crash_in_c();
+#else
+            Debug.LogWarning("Native crash_in_c requires an IL2CPP player build.");
+#endif
+        }
+
+        public static void NativeCallbackException()
+        {
+            Debug.Log("CRASHLAB::native_callback_exception::START");
+#if (UNITY_IOS || UNITY_TVOS || UNITY_STANDALONE_OSX || UNITY_ANDROID) && !UNITY_EDITOR
+            try
+            {
+                call_into_csharp(NativeCallbackHandler);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+#else
+            Debug.LogWarning("Native callback exception requires an IL2CPP player build.");
+#endif
+        }
+
+        public static void AndroidThrowKotlin()
+        {
+            Debug.Log("CRASHLAB::android_throw_kotlin::START");
+#if UNITY_ANDROID && !UNITY_EDITOR
+            using (var plugin = new AndroidJavaObject("unity.of.bugs.KotlinPlugin"))
+            {
+                plugin.CallStatic("throw");
+            }
+#else
+            Debug.LogWarning("Kotlin throw is only available on Android devices.");
+#endif
+        }
+
+        public static void AndroidThrowKotlinBackground()
+        {
+            Debug.Log("CRASHLAB::android_throw_kotlin_bg::START");
+#if UNITY_ANDROID && !UNITY_EDITOR
+            using (var plugin = new AndroidJavaObject("unity.of.bugs.KotlinPlugin"))
+            {
+                plugin.CallStatic("throwOnBackgroundThread");
+            }
+#else
+            Debug.LogWarning("Kotlin background throw is only available on Android devices.");
+#endif
+        }
+
+        public static void IosThrowObjectiveC()
+        {
+            Debug.Log("CRASHLAB::ios_throw_objc::START");
+#if UNITY_IOS && !UNITY_EDITOR
+            throwObjectiveC();
+#else
+            Debug.LogWarning("Objective-C throw is only available on iOS builds.");
+#endif
+        }
+
+        public static void IosRunOutOfMemory()
+        {
+            Debug.Log("CRASHLAB::ios_oom_native::START");
+#if UNITY_IOS && !UNITY_EDITOR
+            const int blockSize = 32 * 1024 * 1024;
+            try
+            {
+                while (true)
+                {
+                    var block = new byte[blockSize];
+                    _oom.Add(block);
+                }
+            }
+            catch (OutOfMemoryException)
+            {
+                Environment.FailFast("CrashLab: native-inspired OOM");
+            }
+#else
+            Debug.LogWarning("iOS OOM native scenario is only meaningful on iOS builds.");
+#endif
         }
 
         public static void ManagedUnhandled()

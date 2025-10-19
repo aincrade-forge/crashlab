@@ -30,9 +30,16 @@ namespace CrashLab.UI
             NativeAbort,
             NativeFatal,
             NativeStackOverflow,
+            NativeForceCrash,
+            NativeThrowCpp,
+            NativeCrashInCpp,
+            NativeCrashInC,
+            NativeCallbackException,
             AndroidAnr10,
             DesktopHang10,
             SyncWaitHang10,
+            AndroidThrowKotlin,
+            AndroidThrowKotlinBackground,
             OomHeap,
             FileWriteDenied,
             JsonParseError,
@@ -40,6 +47,8 @@ namespace CrashLab.UI
             BackgroundThreadUnhandled,
             ThreadPoolUnhandled,
             UnityApiFromWorker,
+            IosThrowObjectiveC,
+            IosRunOutOfMemory,
             AssetBundleFlood,
             AssetBundleFloodEditor,
             ScheduleStartupCrash,
@@ -83,11 +92,20 @@ namespace CrashLab.UI
             new ButtonEntry { label = "Native: Abort", action = ActionType.NativeAbort },
             new ButtonEntry { label = "Native: FatalError", action = ActionType.NativeFatal },
             new ButtonEntry { label = "Native: StackOverflow", action = ActionType.NativeStackOverflow },
+            new ButtonEntry { label = "Native: ForceCrash()", action = ActionType.NativeForceCrash },
+            new ButtonEntry { label = "Native: throw_cpp()", action = ActionType.NativeThrowCpp },
+            new ButtonEntry { label = "Native: crash_in_cpp()", action = ActionType.NativeCrashInCpp },
+            new ButtonEntry { label = "Native: crash_in_c()", action = ActionType.NativeCrashInC },
+            new ButtonEntry { label = "Native: Callback Exception", action = ActionType.NativeCallbackException },
             new ButtonEntry { label = "Schedule: Startup crash", action = ActionType.ScheduleStartupCrash },
             new ButtonEntry { label = "Hang: Android ANR (10s)", action = ActionType.AndroidAnr10 },
             new ButtonEntry { label = "Hang: Desktop (10s)", action = ActionType.DesktopHang10 },
             new ButtonEntry { label = "Hang: Sync Wait (10s)", action = ActionType.SyncWaitHang10 },
             new ButtonEntry { label = "OOM: Heap", action = ActionType.OomHeap },
+            new ButtonEntry { label = "Android: Kotlin throw", action = ActionType.AndroidThrowKotlin },
+            new ButtonEntry { label = "Android: Kotlin throw (background)", action = ActionType.AndroidThrowKotlinBackground },
+            new ButtonEntry { label = "iOS: Objective-C throw", action = ActionType.IosThrowObjectiveC },
+            new ButtonEntry { label = "iOS: Native OOM", action = ActionType.IosRunOutOfMemory },
             new ButtonEntry { label = "Memory: Asset bundle flood", action = ActionType.AssetBundleFlood },
             new ButtonEntry { label = "Memory: Asset bundle flood (editor)", action = ActionType.AssetBundleFloodEditor },
             new ButtonEntry { label = "IO: File Write Denied", action = ActionType.FileWriteDenied },
@@ -195,9 +213,16 @@ namespace CrashLab.UI
                 case ActionType.NativeAbort: return CrashActions.NativeAbort;
                 case ActionType.NativeFatal: return CrashActions.NativeFatal;
                 case ActionType.NativeStackOverflow: return CrashActions.NativeStackOverflow;
+                case ActionType.NativeForceCrash: return CrashActions.NativeForceCrash;
+                case ActionType.NativeThrowCpp: return CrashActions.NativeThrowCpp;
+                case ActionType.NativeCrashInCpp: return CrashActions.NativeCrashInCpp;
+                case ActionType.NativeCrashInC: return CrashActions.NativeCrashInC;
+                case ActionType.NativeCallbackException: return CrashActions.NativeCallbackException;
                 case ActionType.AndroidAnr10: return () => CrashActions.AndroidAnr(10);
                 case ActionType.DesktopHang10: return () => CrashActions.DesktopHang(10);
                 case ActionType.SyncWaitHang10: return () => CrashActions.SyncWaitHang(10);
+                case ActionType.AndroidThrowKotlin: return CrashActions.AndroidThrowKotlin;
+                case ActionType.AndroidThrowKotlinBackground: return CrashActions.AndroidThrowKotlinBackground;
                 case ActionType.OomHeap: return CrashActions.OomHeap;
                 case ActionType.AssetBundleFlood: return CrashActions.AssetBundleFlood;
                 case ActionType.AssetBundleFloodEditor: return CrashActions.AssetBundleFloodEditor;
@@ -207,6 +232,8 @@ namespace CrashLab.UI
                 case ActionType.BackgroundThreadUnhandled: return CrashActions.BackgroundThreadUnhandled;
                 case ActionType.ThreadPoolUnhandled: return CrashActions.ThreadPoolUnhandled;
                 case ActionType.UnityApiFromWorker: return CrashActions.UnityApiFromWorker;
+                case ActionType.IosThrowObjectiveC: return CrashActions.IosThrowObjectiveC;
+                case ActionType.IosRunOutOfMemory: return CrashActions.IosRunOutOfMemory;
                 case ActionType.ScheduleStartupCrash: return () => CrashActions.ScheduleStartupCrash();
                 case ActionType.NonFatalErrorChain: return TriggerErrorChain;
                 default: return null;
@@ -222,8 +249,13 @@ namespace CrashLab.UI
                 case ActionType.NativeAbort:
                 case ActionType.NativeFatal:
                 case ActionType.NativeStackOverflow:
+                case ActionType.NativeForceCrash:
+                case ActionType.NativeThrowCpp:
+                case ActionType.NativeCrashInCpp:
+                case ActionType.NativeCrashInC:
                 case ActionType.OomHeap:
                 case ActionType.AssetBundleFlood:
+                case ActionType.IosRunOutOfMemory:
                 case ActionType.ScheduleStartupCrash:
                     return Group.Crashes;
 
