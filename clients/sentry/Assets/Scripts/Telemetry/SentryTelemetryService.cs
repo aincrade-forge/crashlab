@@ -47,6 +47,9 @@ namespace CrashLab
                         o.MacosNativeSupportEnabled = true;
                         o.WindowsNativeSupportEnabled = true;
                         o.Il2CppLineNumberSupportEnabled = true;
+
+                        o.AndroidNativeInitializationType = NativeInitializationType.Runtime;
+                        o.IosNativeInitializationType = NativeInitializationType.Runtime;
                     });
                     Debug.Log("CRASHLAB::SENTRY::initialized");
                 }
