@@ -29,7 +29,9 @@ fi
 : "${MATRIX:=false}"
 : "${TESTS:=false}"
 
-ARTIFACT_DIR="$PROJECT_PATH/Artifacts/${TARGET}-${FLAVOR}"
+ARTIFACTS_ROOT="${ARTIFACTS_ROOT_OVERRIDE:-$SCRIPT_DIR/Artifacts}"
+mkdir -p "$ARTIFACTS_ROOT"
+ARTIFACT_DIR="$ARTIFACTS_ROOT/${TARGET}-${FLAVOR}"
 mkdir -p "$ARTIFACT_DIR"
 LOG_PATH="$ARTIFACT_DIR/build.log"
 
@@ -47,11 +49,11 @@ if [[ "$MATRIX" == "true" ]]; then
   }
   for t in "${TARGET_ARR[@]}"; do
     for f in $(flavors_for_target "$t"); do
-      ARTIFACT_DIR="$PROJECT_PATH/Artifacts/${t}-${f}"
+      ARTIFACT_DIR="$ARTIFACTS_ROOT/${t}-${f}"
       mkdir -p "$ARTIFACT_DIR"
       LOG_PATH="$ARTIFACT_DIR/build.log"
       echo "Building $t / $f (dev=$DEV_MODE)" | tee "$LOG_PATH"
-      TARGET="$t" FLAVOR="$f" DEV_MODE="$DEV_MODE" \
+      ARTIFACTS_ROOT="$ARTIFACTS_ROOT" TARGET="$t" FLAVOR="$f" DEV_MODE="$DEV_MODE" \
       "$UNITY_APP" -batchmode -quit -nographics \
         -projectPath "$PROJECT_PATH" \
         -logFile "$LOG_PATH" \
@@ -89,7 +91,7 @@ if [[ "$MATRIX" == "true" ]]; then
   echo "Build matrix finished. Logs under Artifacts/<target>-<flavor>/build.log"
 elif [[ "$TESTS" == "true" ]]; then
   echo "Running test matrix flavors=${FLAVORS:-auto}"
-  FLAVORS="${FLAVORS:-}" \
+  ARTIFACTS_ROOT="$ARTIFACTS_ROOT" FLAVORS="${FLAVORS:-}" \
   "$UNITY_APP" -batchmode -quit -nographics -runTests \
     -projectPath "$PROJECT_PATH" \
     -logFile "$LOG_PATH" \
@@ -98,7 +100,7 @@ elif [[ "$TESTS" == "true" ]]; then
   echo "Test matrix finished. See log: $LOG_PATH"
 else
   echo "Building target=$TARGET flavor=$FLAVOR dev_mode=$DEV_MODE"
-  TARGET="$TARGET" FLAVOR="$FLAVOR" DEV_MODE="$DEV_MODE" \
+  ARTIFACTS_ROOT="$ARTIFACTS_ROOT" TARGET="$TARGET" FLAVOR="$FLAVOR" DEV_MODE="$DEV_MODE" \
   "$UNITY_APP" -batchmode -quit -nographics \
     -projectPath "$PROJECT_PATH" \
     -logFile "$LOG_PATH" \

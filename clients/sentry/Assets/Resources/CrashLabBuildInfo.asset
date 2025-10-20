@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ad98f7f60744447687cd82020dfe024, type: 3}
   m_Name: CrashLabBuildInfo
   m_EditorClassIdentifier: 
-  commitSha: 89a42ea76
+  commitSha: 8f4cf7a17
   branch: main
   buildNumber: 
-  buildTimestampUtc: 2025-09-23T22:18:36.8676870Z
+  buildTimestampUtc: 2025-10-19T16:34:38.6945910Z

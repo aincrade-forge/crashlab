@@ -34,6 +34,9 @@ Recordings/
 Thumbs.db
 desktop.ini
 
+# Temp extension files
+*.utmp
+
 # Unity Player logs (runtime)
 **/Player.log
 **/Player-prev.log
@@ -66,3 +69,6 @@ desktop.ini
 /.gradle/
 /gradle/
 *.gradle
+
+# Unity resolver/local repos
+GeneratedLocalRepo/

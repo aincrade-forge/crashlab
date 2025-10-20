@@ -1,0 +1,143 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Default Local Group
+  m_EditorClassIdentifier: 
+  m_GroupName: Default Local Group
+  m_GUID: f64645d8d4a6541b2bcb57a88248b08a
+  m_SerializeEntries:
+  - m_GUID: 0760d6eb7841a405388f76987361bbf5
+    m_Address: Assets/addressables/SPR_Ui_Shop_Banner_NA.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0d949546227f91d43acf87fa19c1085b
+    m_Address: Assets/addressables/P_ChestKey_Visual.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 268282adfd80c2b499e05751950b4548
+    m_Address: Assets/addressables/M_Chest.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3714936207d26f5409c7b92b9a9ab6ff
+    m_Address: Assets/addressables/M_Chest_Shadow.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 398903c0d653d4893af21a17b8856441
+    m_Address: Assets/addressables/SPR_UI_Button_Back_02.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 39e6d6f8216644948bb7ab92c518752c
+    m_Address: Assets/addressables/SPR_UI_Button_Blue_2.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3dd5a5608a944db488815dfba7bab583
+    m_Address: Assets/addressables/A_SpinButton_Down.anim
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 420104812f204bb45adfdaeb48ba18ef
+    m_Address: Assets/addressables/AdditiveMobile.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 59e7bfb175542614db3f980e53a289aa
+    m_Address: Assets/addressables/M_Ui_Default.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7174a81ddf2a15946b17cf3975dba713
+    m_Address: Assets/addressables/P_Chest_Shadow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 816a78549caed4999b2a5c84c9717486
+    m_Address: Assets/addressables/SPR_Ui_Loading_02_Bg.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c15beb6971224856965213c48f5a678
+    m_Address: Assets/addressables/SPR_Ui_EventBG_NA.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9e3c6294226f54c88aa78251a27c34dd
+    m_Address: Assets/addressables/SPR_UI_Button_Back_01.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9f91b5f57916e4fe8ab33254655402c9
+    m_Address: Assets/addressables/M_Chest_Background_Texture.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b5f58806b2ee5dc48965ef95ed6a1932
+    m_Address: Assets/addressables/A_SpinButton_DownFalse.anim
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bfd20963bdec27140abfff9b1fb11845
+    m_Address: Assets/addressables/P_Chest.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c5f3489ed5370e048afa90a3c31902ce
+    m_Address: Assets/addressables/M_Chest_Background.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f0eeecb7425074740a2a1c879415cb17
+    m_Address: Assets/addressables/AlphaBlend.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f176c0d6b430b4543837c443b4118009
+    m_Address: Assets/addressables/SPR_Ui_Button_Blue_01.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f831e91bccf22d74c99fc89d1a8d3458
+    m_Address: Assets/addressables/A_SpinButton_Up.anim
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - crashlab.asset_flood
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 461ecd20cf7e54144a2b372bec7d3503, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 89d5a536c8423460c9f8d553bda560e0, type: 2}
+    - {fileID: 11400000, guid: 2d6b5d5a75e3e4ccf8649ac1d2dbc9a5, type: 2}
