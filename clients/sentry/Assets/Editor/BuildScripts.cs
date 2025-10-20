@@ -269,42 +269,10 @@ using System.Diagnostics;
 
     private static void ConfigureIdentifiers(BuildTargetGroup group, string targetKey, string flavor)
     {
-        // Allow explicit IDs via env vars; fall back to sensible defaults per flavor
-        // Generic override
-        var genericId = GetEnv("BUNDLE_ID", null);
-
-        // Platform-specific overrides
-        var androidId = GetEnv("BUNDLE_ID_ANDROID", GetEnv("ANDROID_APPLICATION_ID", null));
-        var iosId = GetEnv("BUNDLE_ID_IOS", GetEnv("IOS_BUNDLE_ID", null));
-
-        // Default patterns if nothing provided
-        string DefaultFor(string platform)
-            => $"com.aincrade.crashlab.{flavor}.{platform}".ToLowerInvariant();
-
-        switch (targetKey)
-        {
-            case "android-arm64":
-                var finalAndroid = genericId ?? androidId ?? DefaultFor("android");
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, finalAndroid);
-                Log($"Android applicationId: {finalAndroid}");
-                break;
-            case "ios-arm64":
-                var finalIos = genericId ?? iosId ?? DefaultFor("ios");
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, finalIos);
-                Log($"iOS bundle id: {finalIos}");
-                break;
-            case "macos-arm64":
-                // Optional: set standalone identifier (not strictly required)
-                var finalMac = genericId ?? DefaultFor("macos");
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, finalMac);
-                Log($"macOS bundle id: {finalMac}");
-                break;
-            case "windows-x64":
-                var finalWin = genericId ?? DefaultFor("windows");
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, finalWin);
-                Log($"Windows product id: {finalWin}");
-                break;
-        }
+        // No-op for current setup: keep application/bundle identifiers as configured
+        // in ProjectSettings or via external build tooling. This avoids mismatches
+        // with service configuration files (e.g., google-services.json).
+        Log("Skipping application identifier modification");
     }
 
     private static string ResolveOutputPath(BuildTarget target, string targetKey, string flavor, string output, string artifactDir)
