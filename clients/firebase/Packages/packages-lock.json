@@ -7,7 +7,7 @@
       "dependencies": {}
     },
     "com.google.firebase.app": {
-      "version": "file:GooglePackages/com.google.firebase.app-12.10.1.tgz",
+      "version": "file:GooglePackages/com.google.firebase.app-13.4.0.tgz",
       "depth": 0,
       "source": "local-tarball",
       "dependencies": {
@@ -15,11 +15,11 @@
       }
     },
     "com.google.firebase.crashlytics": {
-      "version": "file:GooglePackages/com.google.firebase.crashlytics-12.10.1.tgz",
+      "version": "file:GooglePackages/com.google.firebase.crashlytics-13.4.0.tgz",
       "depth": 0,
       "source": "local-tarball",
       "dependencies": {
-        "com.google.firebase.app": "12.10.1"
+        "com.google.firebase.app": "13.4.0"
       }
     },
     "com.unity.2d.animation": {

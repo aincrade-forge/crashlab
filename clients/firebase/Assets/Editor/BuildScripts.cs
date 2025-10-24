@@ -92,7 +92,6 @@ using System.Diagnostics;
         public static string BuildOnce(string target, string flavor, bool development, string output = "")
         {
             var (buildTarget, group) = MapTarget(target);
-            ConfigureFlavor(group, buildTarget, flavor);
             ConfigureIdentifiers(group, target, flavor);
             ConfigureIl2Cpp(group, buildTarget, target);
 
@@ -169,55 +168,7 @@ using System.Diagnostics;
                 throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported TARGET value");
         }
     }
-
-    private static void ConfigureFlavor(BuildTargetGroup group, BuildTarget buildTarget, string flavor)
-    {
-        var named = GetNamedBuildTarget(group, buildTarget);
-        var defines = PlayerSettings.GetScriptingDefineSymbols(named) ?? string.Empty;
-        string[] clear = { "DIAG_SENTRY", "DIAG_CRASHLYTICS", "DIAG_UNITY" };
-        foreach (var c in clear)
-            defines = RemoveDefine(defines, c);
-
-        var add = flavor.ToLowerInvariant() switch
-        {
-            "sentry" => "DIAG_SENTRY",
-            "crashlytics" => "DIAG_CRASHLYTICS",
-            _ => "DIAG_UNITY",
-        };
-        defines = AddDefine(defines, add);
-        PlayerSettings.SetScriptingDefineSymbols(named, defines);
-        Log($"Flavor set: {flavor} → define {add}");
-
-        // Toggle Unity Cloud Diagnostics Crash Reporting based on flavor
-        // Enabled only for DIAG_UNITY builds; disabled for Sentry/Crashlytics flavors to avoid duplicates
-        var enableCloudCrash = add == "DIAG_UNITY";
-        try
-        {
-            SetUnityCloudCrashReporting(enableCloudCrash);
-            Log($"Unity Cloud Diagnostics Crash Reporting: {(enableCloudCrash ? "enabled" : "disabled")} for flavor={flavor}");
-        }
-        catch (Exception e)
-        {
-            LogError($"Failed to update Unity Connect CrashReporting settings: {e.Message}");
-        }
-
-        // SentryOptions.asset is now managed by a PreBuild hook (SentryPreBuildHook).
-        // No action needed here to avoid duplication.
-    }
-
-    private static string AddDefine(string defines, string add)
-    {
-        var parts = defines.Split(';').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
-        if (!parts.Contains(add)) parts.Add(add);
-        return string.Join(";", parts);
-    }
-
-    private static string RemoveDefine(string defines, string rem)
-    {
-        var parts = defines.Split(';').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s) && s != rem).ToList();
-        return string.Join(";", parts);
-    }
-
+    
     private static void ConfigureIl2Cpp(BuildTargetGroup group, BuildTarget target, string targetKey)
     {
         var named = GetNamedBuildTarget(group, target);
@@ -226,9 +177,6 @@ using System.Diagnostics;
         if (target == BuildTarget.Android)
         {
 #if UNITY_ANDROID
-            // Prefer APK by default
-            EditorUserBuildSettings.buildAppBundle = false;
-            // ARM64 only
             UnityEditor.PlayerSettings.Android.targetArchitectures = UnityEditor.AndroidArchitecture.ARM64;
 #endif
         }
@@ -344,106 +292,6 @@ using System.Diagnostics;
         }
     }
 
-    // ----- Test Matrix -----
-
-    // CLI entry: -executeMethod BuildScripts.TestMatrix
-    // Runs EditMode tests per flavor for the active Editor platform.
-    // Env: FLAVORS to limit set (default: per current platform), STOP_ON_FAIL=true (default true)
-    public static void TestMatrix()
-    {
-        try
-        {
-            var current = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 ? "windows-x64"
-                        : EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneOSX ? "macos-arm64"
-                        : EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android ? "android-arm64"
-                        : EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS ? "ios-arm64"
-                        : "macos-arm64";
-
-            var stopOnFail = !GetEnv("STOP_ON_FAIL", "true").Equals("false", StringComparison.OrdinalIgnoreCase);
-            var flavorsEnv = GetEnv("FLAVORS", null);
-            var flavors = !string.IsNullOrEmpty(flavorsEnv)
-                ? flavorsEnv.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToArray()
-                : FlavorsForTarget(current);
-
-            foreach (var f in flavors)
-            {
-                try
-                {
-                    RunEditModeTestsForFlavor(f);
-                }
-                catch (Exception ex)
-                {
-                    LogError($"Tests failed for flavor={f}: {ex.Message}");
-                    if (stopOnFail) throw;
-                }
-            }
-
-            EditorApplication.Exit(0);
-        }
-        catch (Exception ex)
-        {
-            LogError(ex.ToString());
-            EditorApplication.Exit(1);
-        }
-    }
-
-    private static void RunEditModeTestsForFlavor(string flavor)
-    {
-        // Switch defines via same flavor config used in builds
-        var (_, group) = MapTarget(GuessTargetKeyFromActive());
-        ConfigureFlavor(group, EditorUserBuildSettings.activeBuildTarget, flavor);
-
-        var api = new TestRunnerApi();
-        var filter = new Filter()
-        {
-            testMode = TestMode.EditMode
-        };
-
-        var done = false; bool success = false;
-        api.RegisterCallbacks(new TestCallbacks(r => { success = r; done = true; }));
-        api.Execute(new ExecutionSettings(filter));
-
-        // Busy wait until callback signals completion (Editor-only context)
-        var start = DateTime.UtcNow;
-        while (!done)
-        {
-            if ((DateTime.UtcNow - start).TotalMinutes > 10)
-            {
-                throw new TimeoutException("EditMode tests timed out");
-            }
-            System.Threading.Thread.Sleep(100);
-        }
-
-        if (!success)
-            throw new Exception("EditMode tests failed");
-        Log($"EditMode tests passed for flavor={flavor}");
-    }
-
-    private class TestCallbacks : ICallbacks
-    {
-        private readonly Action<bool> _done;
-        private bool _ok = true;
-        public TestCallbacks(Action<bool> done) { _done = done; }
-        public void RunStarted(ITestAdaptor testsToRun) {}
-        public void RunFinished(ITestResultAdaptor result)
-        {
-            _ok = result.FailCount == 0 && result.InconclusiveCount == 0 && result.SkipCount == 0;
-            _done?.Invoke(_ok);
-        }
-        public void TestStarted(ITestAdaptor test) {}
-        public void TestFinished(ITestResultAdaptor result) {}
-    }
-
-    private static string GuessTargetKeyFromActive()
-        => EditorUserBuildSettings.activeBuildTarget switch
-        {
-            BuildTarget.Android => "android-arm64",
-            BuildTarget.iOS => "ios-arm64",
-            BuildTarget.StandaloneWindows64 => "windows-x64",
-            BuildTarget.StandaloneOSX => "macos-arm64",
-            _ => "macos-arm64"
-        };
-
     private static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     private static string GetEnv(string key, string def) => Environment.GetEnvironmentVariable(key) ?? def;
@@ -480,32 +328,4 @@ using System.Diagnostics;
             return $"{(int)ts.TotalMinutes}m {ts.Seconds}s";
         return $"{ts.Seconds}s";
     }
-
-    // --- Unity Cloud Diagnostics CrashReporting toggle ---
-    private static void SetUnityCloudCrashReporting(bool enabled)
-    {
-        var path = Path.Combine("ProjectSettings", "UnityConnectSettings.asset");
-        if (!File.Exists(path)) throw new FileNotFoundException(path);
-        var text = File.ReadAllText(path);
-
-        // Replace the specific CrashReportingSettings m_Enabled line
-        // We search for the marker block then replace the next m_Enabled: value within that block
-        const string blockStart = "CrashReportingSettings:";
-        var idx = text.IndexOf(blockStart, StringComparison.Ordinal);
-        if (idx < 0) throw new Exception("CrashReportingSettings block not found");
-        var blockEnd = text.IndexOf("UnityPurchasingSettings:", idx, StringComparison.Ordinal);
-        if (blockEnd < 0) blockEnd = text.Length;
-
-        var block = text.Substring(idx, blockEnd - idx);
-        var newBlock = System.Text.RegularExpressions.Regex.Replace(
-            block,
-            @"(^\s*m_Enabled:\s*)([01])\s*$",
-            m => m.Groups[1].Value + (enabled ? "1" : "0"),
-            System.Text.RegularExpressions.RegexOptions.Multiline);
-
-        if (block == newBlock) return; // no change
-        var newText = text.Substring(0, idx) + newBlock + text.Substring(blockEnd);
-        File.WriteAllText(path, newText);
-    }
-
 }
