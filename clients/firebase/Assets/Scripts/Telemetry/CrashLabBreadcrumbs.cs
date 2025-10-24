@@ -1,11 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
-using UnityEngine;
-
-#if DIAG_SENTRY
-using Sentry;
-#endif
 
 namespace CrashLab
 {
@@ -35,28 +29,6 @@ namespace CrashLab
 
         public static void Add(string message, CrashLabBreadcrumbLevel level, string category = DefaultCategory, IReadOnlyDictionary<string, string> data = null)
         {
-#if DIAG_SENTRY
-            try
-            {
-                var breadcrumbLevel = level switch
-                {
-                    CrashLabBreadcrumbLevel.Debug => BreadcrumbLevel.Debug,
-                    CrashLabBreadcrumbLevel.Warning => BreadcrumbLevel.Warning,
-                    CrashLabBreadcrumbLevel.Error => BreadcrumbLevel.Error,
-                    _ => BreadcrumbLevel.Info
-                };
-                Dictionary<string, string> payload = null;
-                if (data != null && data.Count > 0)
-                {
-                    payload = new Dictionary<string, string>(data);
-                }
-                SentrySdk.AddBreadcrumb(message, category: category, level: breadcrumbLevel, data: payload);
-            }
-            catch (Exception e)
-            {
-                UnityEngine.Debug.LogWarning($"CRASHLAB::BREADCRUMB_FAIL::{e.GetType().Name}:{e.Message}");
-            }
-#else
             if (data != null && data.Count > 0)
             {
                 UnityEngine.Debug.Log($"CRASHLAB::BREADCRUMB::{category}::{level}::{message}::{FormatData(data)}");
@@ -65,10 +37,8 @@ namespace CrashLab
             {
                 UnityEngine.Debug.Log($"CRASHLAB::BREADCRUMB::{category}::{level}::{message}");
             }
-#endif
         }
 
-#if !DIAG_SENTRY
         private static string FormatData(IReadOnlyDictionary<string, string> data)
         {
             if (data == null || data.Count == 0) return string.Empty;
@@ -82,6 +52,5 @@ namespace CrashLab
             }
             return builder.ToString();
         }
-#endif
     }
 }
